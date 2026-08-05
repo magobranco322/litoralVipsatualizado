@@ -6,7 +6,8 @@ import TripDetailDialog from '../components/TripDetailDialog';
 import { useTrips } from '../context/TripsContext';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { PawPrint, Home, MapPin, ArrowUpDown, Search as SearchIcon, Plus, Calendar, X } from 'lucide-react';
+import { CITIES } from '../mock';
+import { PawPrint, Home, MapPin, ArrowUpDown, Plus, Calendar, X, ArrowRightLeft } from 'lucide-react';
 
 const FilterChip = ({ active, onClick, icon: Icon, children }) => (
   <button className={`chip ${active ? 'active' : ''}`} onClick={onClick}>
@@ -19,12 +20,25 @@ const SearchPage = () => {
   const { trips } = useTrips();
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [query, setQuery] = useState('');
+  const [originFilter, setOriginFilter] = useState('');
+  const [destFilter, setDestFilter] = useState('');
   const [filters, setFilters] = useState({ pet: false, home: false, near: false });
   const [sort, setSort] = useState('date');
   const [sortOpen, setSortOpen] = useState(false);
   const [dateFilter, setDateFilter] = useState('');
   const [selectedTrip, setSelectedTrip] = useState(null);
+
+  // Available cities from trips + mock CITIES list
+  const availableCities = useMemo(() => {
+    const set = new Set(CITIES);
+    trips.forEach((t) => { if (t.origin) set.add(t.origin); if (t.destination) set.add(t.destination); });
+    return Array.from(set).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+  }, [trips]);
+
+  const swap = () => {
+    setOriginFilter(destFilter);
+    setDestFilter(originFilter);
+  };
 
   // Convert display date "DD/MM/YYYY" to ISO "YYYY-MM-DD"
   const toIso = (d) => {
@@ -39,16 +53,18 @@ const SearchPage = () => {
     if (filters.pet) list = list.filter((t) => t.petFriendly);
     if (filters.home) list = list.filter((t) => t.homePickup);
     if (dateFilter) list = list.filter((t) => toIso(t.date) === dateFilter);
-    if (query.trim()) {
-      const q = query.toLowerCase();
-      list = list.filter(
-        (t) => t.origin.toLowerCase().includes(q) || t.destination.toLowerCase().includes(q)
-      );
+    if (originFilter.trim()) {
+      const q = originFilter.trim().toLowerCase();
+      list = list.filter((t) => t.origin.toLowerCase().includes(q));
+    }
+    if (destFilter.trim()) {
+      const q = destFilter.trim().toLowerCase();
+      list = list.filter((t) => t.destination.toLowerCase().includes(q));
     }
     if (sort === 'price') list = [...list].sort((a, b) => a.price - b.price);
     else if (sort === 'rating') list = [...list].sort((a, b) => b.rating - a.rating);
     return list;
-  }, [trips, filters, query, sort, dateFilter]);
+  }, [trips, filters, originFilter, destFilter, sort, dateFilter]);
 
   return (
     <div className="mobile-shell">
@@ -71,14 +87,66 @@ const SearchPage = () => {
           )}
         </div>
 
-        <div className="input-icon-wrap mt-5">
-          <SearchIcon size={18} className="input-icon" />
-          <input
-            className="round-input"
-            placeholder="Origem ou destino"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
+        <div className="mt-5">
+          <datalist id="cities-list">
+            {availableCities.map((c) => (
+              <option key={c} value={c} />
+            ))}
+          </datalist>
+          <div className="input-icon-wrap">
+            <span className="absolute left-4 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-[var(--bj-navy)] z-10" />
+            <input
+              list="cities-list"
+              className="round-input"
+              style={{ paddingLeft: '38px' }}
+              placeholder="Origem"
+              value={originFilter}
+              onChange={(e) => setOriginFilter(e.target.value)}
+            />
+            {originFilter && (
+              <button
+                type="button"
+                onClick={() => setOriginFilter('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full hover:bg-[var(--bj-cream-2)] flex items-center justify-center"
+                title="Limpar origem"
+              >
+                <X size={14} />
+              </button>
+            )}
+          </div>
+
+          <div className="flex justify-center -my-1 relative z-10">
+            <button
+              type="button"
+              onClick={swap}
+              className="w-9 h-9 rounded-full bg-white border border-[#ece3c7] hover:border-[var(--bj-navy)] flex items-center justify-center transition-colors shadow-sm rotate-90"
+              title="Inverter"
+            >
+              <ArrowRightLeft size={16} className="text-[var(--bj-navy)]" />
+            </button>
+          </div>
+
+          <div className="input-icon-wrap">
+            <span className="absolute left-4 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-[var(--bj-yellow)] z-10" />
+            <input
+              list="cities-list"
+              className="round-input"
+              style={{ paddingLeft: '38px' }}
+              placeholder="Destino"
+              value={destFilter}
+              onChange={(e) => setDestFilter(e.target.value)}
+            />
+            {destFilter && (
+              <button
+                type="button"
+                onClick={() => setDestFilter('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full hover:bg-[var(--bj-cream-2)] flex items-center justify-center"
+                title="Limpar destino"
+              >
+                <X size={14} />
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="mt-3 flex items-center gap-2">

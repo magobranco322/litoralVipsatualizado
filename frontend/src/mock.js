@@ -68,7 +68,7 @@ export const MOCK_USERS = [
   },
   {
     id: 'admin',
-    name: 'Admin BoraJunto',
+    name: 'Admin VIP Litoral',
     email: 'admin@borajunto.com',
     password: 'admin',
     role: 'admin',

@@ -49,7 +49,7 @@ const LoginPage = () => {
             <Car size={22} className="text-[var(--bj-yellow)]" />
           </div>
           <div>
-            <div className="text-[22px] font-extrabold text-[var(--bj-text)] leading-tight">BoraJunto</div>
+            <div className="text-[20px] font-extrabold text-[var(--bj-text)] leading-tight tracking-tight">MOTORISTAS VIP LITORAL</div>
             <div className="text-sm text-[var(--bj-text)] opacity-70">Caronas & transfer pelo litoral</div>
           </div>
         </div>

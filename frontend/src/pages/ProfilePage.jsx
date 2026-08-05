@@ -59,7 +59,7 @@ const ProfilePage = () => {
         <div className="mt-6 p-4 rounded-2xl bg-white border border-[#ece3c7]">
           <div className="font-bold text-[var(--bj-text)] mb-2">Sobre você</div>
           <p className="text-sm text-[var(--bj-text)] opacity-80 leading-relaxed">
-            Bem-vindo(a) ao BoraJunto! Complete seu perfil para aumentar a confiança de outros usuários e receber mais oportunidades de viagem.
+            Bem-vindo(a) à Motoristas VIP Litoral! Complete seu perfil para aumentar a confiança de outros usuários e receber mais oportunidades de viagem.
           </p>
         </div>
       </div>

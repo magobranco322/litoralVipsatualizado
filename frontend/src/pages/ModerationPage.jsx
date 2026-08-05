@@ -58,7 +58,7 @@ const ModerationPage = () => {
           <Shield size={22} className="text-[var(--bj-navy)]" />
           <h1 className="text-3xl font-extrabold text-[var(--bj-text)] leading-tight">Moderação</h1>
         </div>
-        <p className="text-[var(--bj-text)] opacity-70">Painel administrativo do BoraJunto.</p>
+        <p className="text-[var(--bj-text)] opacity-70">Painel administrativo Motoristas VIP Litoral.</p>
 
         <div className="grid grid-cols-3 gap-2 mt-5">
           <div className="bg-white p-3 rounded-2xl border border-[#ece3c7] text-center">
