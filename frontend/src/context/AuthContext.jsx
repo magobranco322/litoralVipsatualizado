@@ -48,7 +48,7 @@ export const AuthProvider = ({ children }) => {
       role: data.role,
       rating: 0.0,
       trips: 0,
-      avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(data.name)}`,
+      avatar: data.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(data.name)}`,
       status: 'ativo',
       verified: false,
       createdAt: new Date().toISOString().slice(0, 10),

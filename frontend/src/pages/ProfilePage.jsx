@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import Header from '../components/Header';
 import BottomNav from '../components/BottomNav';
 import { useAuth } from '../context/AuthContext';
-import { Star, Car, UserRound, Shield, BadgeCheck, Phone, Mail, MapPin, Bell, HelpCircle, ChevronRight } from 'lucide-react';
+import { Star, Car, UserRound, Shield, BadgeCheck, Phone, Mail, MapPin, Bell, HelpCircle, ChevronRight, Camera } from 'lucide-react';
+import { readImageAsDataUrl } from '../lib/image';
+import { useToast } from '../hooks/use-toast';
 
 const Row = ({ icon: Icon, label, value, onClick }) => (
   <button
@@ -21,7 +23,22 @@ const Row = ({ icon: Icon, label, value, onClick }) => (
 );
 
 const ProfilePage = () => {
-  const { user } = useAuth();
+  const { user, updateUserFields } = useAuth();
+  const fileRef = useRef(null);
+  const { toast } = useToast();
+
+  const handleFile = async (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file || !user) return;
+    try {
+      const dataUrl = await readImageAsDataUrl(file, 400);
+      updateUserFields(user.id, { avatar: dataUrl });
+      toast({ title: 'Foto atualizada!' });
+    } catch (err) {
+      toast({ title: 'Erro na imagem', description: err.message, variant: 'destructive' });
+    }
+  };
+
   if (!user) return null;
 
   const roleLabel = user.role === 'motorista' ? 'Motorista' : user.role === 'admin' ? 'Administrador' : 'Passageiro';
@@ -33,7 +50,19 @@ const ProfilePage = () => {
       <div className="striped-bar" />
       <div className="px-5 pt-6">
         <div className="flex items-center gap-4">
-          <img src={user.avatar} className="w-20 h-20 rounded-full object-cover border-4 border-[var(--bj-yellow)]" alt="" />
+          <div className="relative">
+            <img src={user.avatar} className="w-20 h-20 rounded-full object-cover border-4 border-[var(--bj-yellow)]" alt="" />
+            <button
+              type="button"
+              onClick={() => fileRef.current && fileRef.current.click()}
+              className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-[var(--bj-navy)] border-4 border-[var(--bj-cream)] flex items-center justify-center hover:scale-110 transition-transform"
+              title="Trocar foto"
+              aria-label="Trocar foto"
+            >
+              <Camera size={13} className="text-[var(--bj-yellow)]" />
+            </button>
+            <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
+          </div>
           <div className="min-w-0">
             <div className="text-2xl font-extrabold text-[var(--bj-text)] leading-tight truncate">{user.name}</div>
             <div className="flex items-center gap-1.5 mt-1 text-sm text-[var(--bj-text)] opacity-80">

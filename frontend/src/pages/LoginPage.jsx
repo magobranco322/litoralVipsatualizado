@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Mail, Lock, User as UserIcon, Car, UserRound } from 'lucide-react';
+import { Mail, Lock, User as UserIcon, Car, UserRound, Camera } from 'lucide-react';
 import { useToast } from '../hooks/use-toast';
+import { readImageAsDataUrl } from '../lib/image';
 
 const LoginPage = () => {
   const [mode, setMode] = useState('login');
@@ -10,10 +11,22 @@ const LoginPage = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [avatar, setAvatar] = useState('');
   const [loading, setLoading] = useState(false);
   const { login, register } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  const handleFile = async (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    try {
+      const dataUrl = await readImageAsDataUrl(file, 400);
+      setAvatar(dataUrl);
+    } catch (err) {
+      toast({ title: 'Erro na imagem', description: err.message, variant: 'destructive' });
+    }
+  };
 
   const submit = (e) => {
     e.preventDefault();
@@ -28,7 +41,7 @@ const LoginPage = () => {
           toast({ title: 'Informe seu nome', variant: 'destructive' });
           return;
         }
-        res = register({ name: name.trim(), email: email.trim(), password, role });
+        res = register({ name: name.trim(), email: email.trim(), password, role, avatar });
       }
       setLoading(false);
       if (!res.ok) {
@@ -60,6 +73,24 @@ const LoginPage = () => {
         <p className="text-[var(--bj-text)] opacity-70 mt-1">
           {mode === 'login' ? 'Acesse sua conta para continuar.' : 'Junte-se à comunidade em minutos.'}
         </p>
+
+        {mode === 'register' && (
+          <div className="flex justify-center mt-6">
+            <label className="relative cursor-pointer group">
+              <div className="w-24 h-24 rounded-full overflow-hidden bg-[var(--bj-cream-2)] border-4 border-[var(--bj-yellow)] flex items-center justify-center">
+                {avatar ? (
+                  <img src={avatar} alt="Sua foto" className="w-full h-full object-cover" />
+                ) : (
+                  <UserIcon size={34} className="text-[var(--bj-navy)] opacity-40" />
+                )}
+              </div>
+              <div className="absolute bottom-0 right-0 w-9 h-9 rounded-full bg-[var(--bj-navy)] border-4 border-[var(--bj-cream)] flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Camera size={15} className="text-[var(--bj-yellow)]" />
+              </div>
+              <input type="file" accept="image/*" className="hidden" onChange={handleFile} />
+            </label>
+          </div>
+        )}
 
         {mode === 'register' && (
           <div className="flex gap-2 mt-6">
