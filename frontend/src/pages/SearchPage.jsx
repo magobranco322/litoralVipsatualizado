@@ -6,7 +6,7 @@ import TripDetailDialog from '../components/TripDetailDialog';
 import { useTrips } from '../context/TripsContext';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { PawPrint, Home, MapPin, ArrowUpDown, Search as SearchIcon, Plus } from 'lucide-react';
+import { PawPrint, Home, MapPin, ArrowUpDown, Search as SearchIcon, Plus, Calendar, X } from 'lucide-react';
 
 const FilterChip = ({ active, onClick, icon: Icon, children }) => (
   <button className={`chip ${active ? 'active' : ''}`} onClick={onClick}>
@@ -23,12 +23,22 @@ const SearchPage = () => {
   const [filters, setFilters] = useState({ pet: false, home: false, near: false });
   const [sort, setSort] = useState('date');
   const [sortOpen, setSortOpen] = useState(false);
+  const [dateFilter, setDateFilter] = useState('');
   const [selectedTrip, setSelectedTrip] = useState(null);
+
+  // Convert display date "DD/MM/YYYY" to ISO "YYYY-MM-DD"
+  const toIso = (d) => {
+    if (!d) return '';
+    const parts = d.split('/');
+    if (parts.length !== 3) return d;
+    return `${parts[2]}-${parts[1]}-${parts[0]}`;
+  };
 
   const filtered = useMemo(() => {
     let list = trips.filter((t) => t.status !== 'cancelada');
     if (filters.pet) list = list.filter((t) => t.petFriendly);
     if (filters.home) list = list.filter((t) => t.homePickup);
+    if (dateFilter) list = list.filter((t) => toIso(t.date) === dateFilter);
     if (query.trim()) {
       const q = query.toLowerCase();
       list = list.filter(
@@ -38,7 +48,7 @@ const SearchPage = () => {
     if (sort === 'price') list = [...list].sort((a, b) => a.price - b.price);
     else if (sort === 'rating') list = [...list].sort((a, b) => b.rating - a.rating);
     return list;
-  }, [trips, filters, query, sort]);
+  }, [trips, filters, query, sort, dateFilter]);
 
   return (
     <div className="mobile-shell">
@@ -69,6 +79,28 @@ const SearchPage = () => {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
+        </div>
+
+        <div className="mt-3 flex items-center gap-2">
+          <div className="input-icon-wrap flex-1">
+            <Calendar size={18} className="input-icon" />
+            <input
+              type="date"
+              className="round-input pr-4"
+              value={dateFilter}
+              onChange={(e) => setDateFilter(e.target.value)}
+              placeholder="Filtrar por data"
+            />
+          </div>
+          {dateFilter && (
+            <button
+              onClick={() => setDateFilter('')}
+              className="w-11 h-11 rounded-full bg-white border border-[#ece3c7] hover:border-[var(--bj-red)] hover:text-[var(--bj-red)] flex items-center justify-center transition-colors"
+              title="Limpar data"
+            >
+              <X size={18} />
+            </button>
+          )}
         </div>
 
         <div className="mt-4 flex flex-wrap gap-2">

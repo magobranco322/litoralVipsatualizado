@@ -7,6 +7,7 @@ const STORAGE_TRIPS = 'bj_trips';
 const STORAGE_RES = 'bj_reservations';
 const STORAGE_CHATS = 'bj_chats';
 const STORAGE_RATINGS = 'bj_ratings';
+const STORAGE_NOTIFS = 'bj_notifications';
 
 const read = (key, fallback) => {
   try {
@@ -21,10 +22,34 @@ export const TripsProvider = ({ children }) => {
   const [trips, setTrips] = useState(() => read(STORAGE_TRIPS, MOCK_TRIPS));
   const [reservations, setReservations] = useState(() => read(STORAGE_RES, []));
   const [ratings, setRatings] = useState(() => read(STORAGE_RATINGS, {}));
+  const [notifications, setNotifications] = useState(() => read(STORAGE_NOTIFS, []));
 
   useEffect(() => { localStorage.setItem(STORAGE_TRIPS, JSON.stringify(trips)); }, [trips]);
   useEffect(() => { localStorage.setItem(STORAGE_RES, JSON.stringify(reservations)); }, [reservations]);
   useEffect(() => { localStorage.setItem(STORAGE_RATINGS, JSON.stringify(ratings)); }, [ratings]);
+  useEffect(() => { localStorage.setItem(STORAGE_NOTIFS, JSON.stringify(notifications)); }, [notifications]);
+
+  const pushNotification = (userId, type, message, tripId) => {
+    if (!userId) return;
+    const notif = {
+      id: 'n_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+      userId, type, message, tripId,
+      at: new Date().toISOString(),
+      read: false,
+    };
+    setNotifications((prev) => [notif, ...prev]);
+  };
+
+  const getNotificationsFor = (userId) =>
+    notifications.filter((n) => n.userId === userId).sort((a, b) => (a.at < b.at ? 1 : -1));
+
+  const markAllNotificationsRead = (userId) => {
+    setNotifications((prev) => prev.map((n) => (n.userId === userId ? { ...n, read: true } : n)));
+  };
+
+  const clearNotifications = (userId) => {
+    setNotifications((prev) => prev.filter((n) => n.userId !== userId));
+  };
 
   const publishTrip = (driver, form) => {
     const newTrip = {
@@ -111,7 +136,46 @@ export const TripsProvider = ({ children }) => {
       `Olá! Acabei de reservar 1 vaga na viagem ${trip.origin} → ${trip.destination} (${trip.date} · ${trip.time}).`
     );
 
+    pushNotification(
+      trip.driverId,
+      'reserva',
+      `${passenger.name} reservou 1 vaga em ${trip.origin} → ${trip.destination}.`,
+      trip.id
+    );
+
     return { ok: true, chatId, reservation: newRes };
+  };
+
+  const updateTrip = (tripId, changes) => {
+    const trip = trips.find((t) => t.id === tripId);
+    if (!trip) return { ok: false, message: 'Viagem não encontrada' };
+    const updated = { ...trip, ...changes };
+    setTrips((prev) => prev.map((t) => (t.id === tripId ? updated : t)));
+
+    const affected = reservations.filter((r) => r.tripId === tripId && r.status === 'confirmada');
+    const parts = [];
+    if (changes.time && changes.time !== trip.time) parts.push(`novo horário ${changes.time}`);
+    if (changes.date && changes.date !== trip.date) parts.push(`nova data ${changes.date}`);
+    if (changes.price !== undefined && Number(changes.price) !== trip.price) parts.push(`novo preço R$ ${changes.price}`);
+    const msg = parts.length
+      ? `Viagem ${trip.origin} → ${trip.destination} foi atualizada: ${parts.join(', ')}.`
+      : `Viagem ${trip.origin} → ${trip.destination} foi atualizada.`;
+    affected.forEach((r) => pushNotification(r.passengerId, 'alteracao', msg, tripId));
+
+    return { ok: true, trip: updated, notified: affected.length };
+  };
+
+  const cancelTrip = (tripId, reason) => {
+    const trip = trips.find((t) => t.id === tripId);
+    if (!trip) return { ok: false, message: 'Viagem não encontrada' };
+    setTrips((prev) => prev.map((t) => (t.id === tripId ? { ...t, status: 'cancelada', seatsFilled: 0 } : t)));
+
+    const affected = reservations.filter((r) => r.tripId === tripId && r.status === 'confirmada');
+    setReservations((prev) => prev.map((r) => (r.tripId === tripId && r.status === 'confirmada' ? { ...r, status: 'cancelada' } : r)));
+    const msg = `Viagem ${trip.origin} → ${trip.destination} foi cancelada pelo motorista${reason ? `. Motivo: ${reason}` : '.'}`;
+    affected.forEach((r) => pushNotification(r.passengerId, 'cancelamento', msg, tripId));
+
+    return { ok: true, notified: affected.length };
   };
 
   const cancelReservation = (reservationId) => {
@@ -119,6 +183,15 @@ export const TripsProvider = ({ children }) => {
     if (!res || res.status === 'cancelada') return;
     setReservations((prev) => prev.map((r) => (r.id === reservationId ? { ...r, status: 'cancelada' } : r)));
     setTrips((prev) => prev.map((t) => (t.id === res.tripId ? { ...t, seatsFilled: Math.max(0, t.seatsFilled - 1) } : t)));
+    const trip = trips.find((t) => t.id === res.tripId);
+    if (trip) {
+      pushNotification(
+        trip.driverId,
+        'cancelamento',
+        `Um passageiro cancelou a reserva em ${trip.origin} → ${trip.destination}.`,
+        trip.id
+      );
+    }
   };
 
   const completeReservation = (reservationId) => {
@@ -152,9 +225,11 @@ export const TripsProvider = ({ children }) => {
   return (
     <TripsContext.Provider
       value={{
-        trips, reservations,
+        trips, reservations, notifications,
         publishTrip, reserveSeat, cancelReservation, completeReservation, rateReservation,
+        updateTrip, cancelTrip,
         ensureChatWith, getRatings,
+        pushNotification, getNotificationsFor, markAllNotificationsRead, clearNotifications,
       }}
     >
       {children}

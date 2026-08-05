@@ -3,10 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
 import BottomNav from '../components/BottomNav';
 import RatingDialog from '../components/RatingDialog';
+import EditTripDialog from '../components/EditTripDialog';
 import { useAuth } from '../context/AuthContext';
 import { useTrips } from '../context/TripsContext';
 import { useToast } from '../hooks/use-toast';
-import { Car, MapPin, Clock, Users, TrendingUp, Wallet, CheckCircle2, Plus, Star, XCircle, Flag } from 'lucide-react';
+import { Car, MapPin, Clock, Users, TrendingUp, Wallet, CheckCircle2, Plus, Star, XCircle, Flag, PencilLine } from 'lucide-react';
 
 const Stat = ({ icon: Icon, label, value, tint }) => (
   <div className="bg-white rounded-2xl p-4 border border-[#ece3c7] flex items-center gap-3">
@@ -26,6 +27,7 @@ const PanelPage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [rating, setRating] = useState(null); // { reservation, trip }
+  const [editingTrip, setEditingTrip] = useState(null);
 
   const localRequests = JSON.parse(localStorage.getItem('bj_requests') || '[]');
 
@@ -91,7 +93,18 @@ const PanelPage = () => {
                   <div className="flex items-center gap-3 mt-2 text-sm text-[var(--bj-text)] opacity-80">
                     <span className="flex items-center gap-1"><Clock size={14} /> {t.date} · {t.time}</span>
                     <span className="flex items-center gap-1"><Users size={14} /> {t.seatsTotal - t.seatsFilled}/{t.seatsTotal}</span>
+                    {t.status === 'cancelada' && (
+                      <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-[#FEE2E2] text-[#991B1B]">cancelada</span>
+                    )}
                   </div>
+                  {t.status !== 'cancelada' && (
+                    <button
+                      onClick={() => setEditingTrip(t)}
+                      className="mt-3 w-full chip justify-center py-2.5"
+                    >
+                      <PencilLine size={16} /> Editar / Cancelar
+                    </button>
+                  )}
                 </div>
               ))
             )}
@@ -222,6 +235,10 @@ const PanelPage = () => {
 
       {rating && (
         <RatingDialog reservation={rating.reservation} trip={rating.trip} onClose={() => setRating(null)} />
+      )}
+
+      {editingTrip && (
+        <EditTripDialog trip={editingTrip} onClose={() => setEditingTrip(null)} />
       )}
 
       <BottomNav />
