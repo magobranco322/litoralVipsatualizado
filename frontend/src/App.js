@@ -2,6 +2,7 @@ import React from 'react';
 import './App.css';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { TripsProvider } from './context/TripsContext';
 import LoginPage from './pages/LoginPage';
 import SearchPage from './pages/SearchPage';
 import RequestPage from './pages/RequestPage';
@@ -9,6 +10,7 @@ import PanelPage from './pages/PanelPage';
 import ChatPage from './pages/ChatPage';
 import ProfilePage from './pages/ProfilePage';
 import ModerationPage from './pages/ModerationPage';
+import PublishTripPage from './pages/PublishTripPage';
 import { Toaster } from './components/ui/toaster';
 
 const Protected = ({ children }) => {
@@ -32,6 +34,7 @@ function AppRoutes() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/buscar" element={<Protected><SearchPage /></Protected>} />
       <Route path="/solicitar" element={<Protected><RequestPage /></Protected>} />
+      <Route path="/publicar" element={<Protected><PublishTripPage /></Protected>} />
       <Route path="/painel" element={<Protected><PanelPage /></Protected>} />
       <Route path="/chat" element={<Protected><ChatPage /></Protected>} />
       <Route path="/chat/:chatId" element={<Protected><ChatPage /></Protected>} />
@@ -46,10 +49,12 @@ function AppRoutes() {
 function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <AppRoutes />
-        <Toaster />
-      </BrowserRouter>
+      <TripsProvider>
+        <BrowserRouter>
+          <AppRoutes />
+          <Toaster />
+        </BrowserRouter>
+      </TripsProvider>
     </AuthProvider>
   );
 }

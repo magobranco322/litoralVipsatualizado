@@ -70,9 +70,19 @@ export const AuthProvider = ({ children }) => {
     persistUsers(updated);
   };
 
+  const updateUserFields = (userId, fields) => {
+    const updated = users.map((u) => (u.id === userId ? { ...u, ...fields } : u));
+    persistUsers(updated);
+    if (user && user.id === userId) {
+      const merged = { ...user, ...fields };
+      setUser(merged);
+      localStorage.setItem('bj_user', JSON.stringify(merged));
+    }
+  };
+
   return (
     <AuthContext.Provider
-      value={{ user, users, loading, login, register, logout, updateUserStatus }}
+      value={{ user, users, loading, login, register, logout, updateUserStatus, updateUserFields }}
     >
       {children}
     </AuthContext.Provider>
