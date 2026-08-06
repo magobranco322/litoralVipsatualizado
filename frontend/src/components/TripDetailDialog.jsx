@@ -1,15 +1,17 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, Clock, Users, PawPrint, Home, Star, X, Car, MessageCircle } from 'lucide-react';
+import { MapPin, Clock, Users, PawPrint, Home, Star, X, Car, MessageCircle, Flag } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTrips } from '../context/TripsContext';
 import { useToast } from '../hooks/use-toast';
+import ReportDialog from './ReportDialog';
 
 const TripDetailDialog = ({ trip, onClose }) => {
   const { user, users } = useAuth();
   const { reserveSeat } = useTrips();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [reportOpen, setReportOpen] = useState(false);
 
   if (!trip) return null;
 
@@ -100,6 +102,23 @@ const TripDetailDialog = ({ trip, onClose }) => {
             <MessageCircle size={16} className="inline mr-1" /> Conversar
           </button>
         </div>
+
+        {!isOwn && (
+          <button
+            onClick={() => setReportOpen(true)}
+            className="mt-3 w-full text-sm text-[var(--bj-red)] font-semibold flex items-center justify-center gap-1.5 hover:underline"
+          >
+            <Flag size={14} /> Denunciar esta viagem
+          </button>
+        )}
+
+        <ReportDialog
+          open={reportOpen}
+          onClose={() => setReportOpen(false)}
+          type="viagem"
+          targetId={trip.id}
+          targetName={`${trip.origin} → ${trip.destination} (${trip.driverName})`}
+        />
       </div>
     </div>
   );

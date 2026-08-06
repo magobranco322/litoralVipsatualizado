@@ -3,7 +3,8 @@ import Header from '../components/Header';
 import BottomNav from '../components/BottomNav';
 import { useTrips } from '../context/TripsContext';
 import { useAuth } from '../context/AuthContext';
-import { Send, ArrowLeft, Search as SearchIcon } from 'lucide-react';
+import { Send, ArrowLeft, Search as SearchIcon, Flag } from 'lucide-react';
+import ReportDialog from '../components/ReportDialog';
 
 const ChatPage = () => {
   const { user } = useAuth();
@@ -12,6 +13,7 @@ const ChatPage = () => {
   const [text, setText] = useState('');
   const [query, setQuery] = useState('');
   const [sending, setSending] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
   const scrollRef = useRef(null);
 
   const active = useMemo(() => chats.find((c) => c.id === activeId), [chats, activeId]);
@@ -63,10 +65,17 @@ const ChatPage = () => {
             <ArrowLeft size={22} className="text-[var(--bj-text)]" />
           </button>
           <img src={active.otherUserAvatar} className="w-10 h-10 rounded-full object-cover" alt="" />
-          <div>
-            <div className="font-bold text-[var(--bj-text)]">{active.otherUserName}</div>
+          <div className="flex-1 min-w-0">
+            <div className="font-bold text-[var(--bj-text)] truncate">{active.otherUserName}</div>
             <div className="text-xs text-[var(--bj-text)] opacity-70">online</div>
           </div>
+          <button
+            onClick={() => setReportOpen(true)}
+            className="w-9 h-9 rounded-full hover:bg-red-50 text-[var(--bj-red)] flex items-center justify-center"
+            title="Denunciar"
+          >
+            <Flag size={18} />
+          </button>
         </div>
         <div ref={scrollRef} className="px-4 py-4 space-y-2 overflow-y-auto" style={{ height: 'calc(100vh - 260px)' }}>
           {active.messages.map((m) => {
@@ -104,6 +113,13 @@ const ChatPage = () => {
             </button>
           </div>
         </div>
+        <ReportDialog
+          open={reportOpen}
+          onClose={() => setReportOpen(false)}
+          type="mensagem"
+          targetId={active.id}
+          targetName={`Conversa com ${active.otherUserName}`}
+        />
       </div>
     );
   }

@@ -68,12 +68,16 @@ class UserOut(BaseModel):
     avatar: str
     status: UserStatus = 'ativo'
     verified: bool = False
+    phone: str = ''
+    city: str = ''
     created_at: datetime
 
 
 class UserPatch(BaseModel):
     name: Optional[str] = None
     avatar: Optional[str] = None
+    phone: Optional[str] = None
+    city: Optional[str] = None
 
 
 class TripIn(BaseModel):
@@ -239,6 +243,8 @@ def user_public(u: dict) -> dict:
         'rating': float(u.get('rating', 0.0)), 'trips': int(u.get('trips', 0)),
         'avatar': u.get('avatar', ''), 'status': u.get('status', 'ativo'),
         'verified': bool(u.get('verified', False)),
+        'phone': u.get('phone', '') or '',
+        'city': u.get('city', '') or '',
         'created_at': u.get('created_at') or datetime.utcnow(),
     }
 

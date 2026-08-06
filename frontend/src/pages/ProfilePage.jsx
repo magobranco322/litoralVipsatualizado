@@ -1,14 +1,14 @@
-import React, { useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Header from '../components/Header';
 import BottomNav from '../components/BottomNav';
 import { useAuth } from '../context/AuthContext';
-import { Star, Car, UserRound, Shield, BadgeCheck, Phone, Mail, MapPin, Bell, HelpCircle, ChevronRight, Camera } from 'lucide-react';
+import { Star, Car, UserRound, Shield, BadgeCheck, Phone, Mail, MapPin, Bell, HelpCircle, ChevronRight, Camera, PencilLine, Check, X, User as UserIcon } from 'lucide-react';
 import { readImageAsDataUrl } from '../lib/image';
 import { useToast } from '../hooks/use-toast';
 
-const Row = ({ icon: Icon, label, value, onClick }) => (
+const DisplayRow = ({ icon: Icon, label, value, onEdit }) => (
   <button
-    onClick={onClick}
+    onClick={onEdit}
     className="w-full flex items-center gap-3 bg-white p-4 rounded-2xl border border-[#ece3c7] hover:border-[var(--bj-navy)] transition-colors text-left"
   >
     <div className="w-9 h-9 rounded-lg bg-[var(--bj-cream-2)] flex items-center justify-center">
@@ -16,9 +16,13 @@ const Row = ({ icon: Icon, label, value, onClick }) => (
     </div>
     <div className="flex-1">
       <div className="text-xs text-[var(--bj-text)] opacity-70">{label}</div>
-      <div className="font-semibold text-[var(--bj-text)]">{value}</div>
+      <div className="font-semibold text-[var(--bj-text)]">{value || <span className="opacity-60 font-normal">Não informado</span>}</div>
     </div>
-    <ChevronRight size={18} className="text-[var(--bj-text)] opacity-40" />
+    {onEdit ? (
+      <PencilLine size={16} className="text-[var(--bj-text)] opacity-50" />
+    ) : (
+      <ChevronRight size={18} className="text-[var(--bj-text)] opacity-40" />
+    )}
   </button>
 );
 
@@ -27,15 +31,47 @@ const ProfilePage = () => {
   const fileRef = useRef(null);
   const { toast } = useToast();
 
+  const [editing, setEditing] = useState(false);
+  const [form, setForm] = useState({ name: '', phone: '', city: '' });
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (user) setForm({ name: user.name || '', phone: user.phone || '', city: user.city || '' });
+  }, [user]);
+
   const handleFile = async (e) => {
     const file = e.target.files && e.target.files[0];
     if (!file || !user) return;
     try {
       const dataUrl = await readImageAsDataUrl(file, 400);
-      updateUserFields(user.id, { avatar: dataUrl });
+      await updateUserFields(user.id, { avatar: dataUrl });
       toast({ title: 'Foto atualizada!' });
     } catch (err) {
       toast({ title: 'Erro na imagem', description: err.message, variant: 'destructive' });
+    }
+  };
+
+  const startEdit = () => setEditing(true);
+  const cancelEdit = () => {
+    setEditing(false);
+    if (user) setForm({ name: user.name || '', phone: user.phone || '', city: user.city || '' });
+  };
+  const saveEdit = async () => {
+    if (!form.name.trim()) {
+      toast({ title: 'O nome não pode ficar vazio', variant: 'destructive' });
+      return;
+    }
+    setSaving(true);
+    try {
+      await updateUserFields(user.id, {
+        name: form.name.trim(),
+        phone: form.phone.trim(),
+        city: form.city.trim(),
+      });
+      toast({ title: 'Perfil atualizado' });
+      setEditing(false);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -67,7 +103,7 @@ const ProfilePage = () => {
             <div className="text-2xl font-extrabold text-[var(--bj-text)] leading-tight truncate">{user.name}</div>
             <div className="flex items-center gap-1.5 mt-1 text-sm text-[var(--bj-text)] opacity-80">
               <Star size={14} className="fill-[var(--bj-navy)] text-[var(--bj-navy)]" />
-              <span className="font-semibold">{user.rating.toFixed(1)}</span>
+              <span className="font-semibold">{Number(user.rating || 0).toFixed(1)}</span>
               <span>· {user.trips} viagens</span>
             </div>
             <div className="mt-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[var(--bj-navy)] text-white text-xs font-bold">
@@ -77,13 +113,59 @@ const ProfilePage = () => {
           </div>
         </div>
 
-        <div className="mt-6 space-y-2.5">
-          <Row icon={Mail} label="E-mail" value={user.email} />
-          <Row icon={Phone} label="Telefone" value="(41) 99999-0000" />
-          <Row icon={MapPin} label="Cidade" value="Curitiba, PR" />
-          <Row icon={Bell} label="Notificações" value="Ativadas" />
-          <Row icon={HelpCircle} label="Ajuda & Suporte" value="Central de atendimento" />
+        <div className="mt-5 flex items-center justify-between">
+          <h2 className="font-extrabold text-[var(--bj-text)]">Dados pessoais</h2>
+          {!editing ? (
+            <button onClick={startEdit} className="chip py-1.5 px-3 text-xs">
+              <PencilLine size={14} /> Editar
+            </button>
+          ) : (
+            <div className="flex gap-2">
+              <button onClick={cancelEdit} className="chip py-1.5 px-3 text-xs"><X size={14} /> Cancelar</button>
+              <button onClick={saveEdit} disabled={saving} className="chip active py-1.5 px-3 text-xs disabled:opacity-70">
+                <Check size={14} /> {saving ? 'Salvando...' : 'Salvar'}
+              </button>
+            </div>
+          )}
         </div>
+
+        {!editing ? (
+          <div className="mt-3 space-y-2.5">
+            <DisplayRow icon={UserIcon} label="Nome" value={user.name} onEdit={startEdit} />
+            <DisplayRow icon={Mail} label="E-mail" value={user.email} />
+            <DisplayRow icon={Phone} label="Telefone" value={user.phone} onEdit={startEdit} />
+            <DisplayRow icon={MapPin} label="Cidade" value={user.city} onEdit={startEdit} />
+            <DisplayRow icon={Bell} label="Notificações" value="Ativadas" />
+            <DisplayRow icon={HelpCircle} label="Ajuda & Suporte" value="Central de atendimento" />
+          </div>
+        ) : (
+          <div className="mt-3 space-y-3">
+            <div>
+              <label className="text-xs font-semibold text-[var(--bj-text)] opacity-70 pl-2">Nome</label>
+              <div className="input-icon-wrap mt-1">
+                <UserIcon size={18} className="input-icon" />
+                <input className="round-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+              </div>
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-[var(--bj-text)] opacity-70 pl-2">Telefone</label>
+              <div className="input-icon-wrap mt-1">
+                <Phone size={18} className="input-icon" />
+                <input className="round-input" placeholder="(41) 99999-0000" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+              </div>
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-[var(--bj-text)] opacity-70 pl-2">Cidade</label>
+              <div className="input-icon-wrap mt-1">
+                <MapPin size={18} className="input-icon" />
+                <input className="round-input" placeholder="Ex: Curitiba, PR" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} />
+              </div>
+            </div>
+            <button onClick={saveEdit} disabled={saving} className="btn-primary w-full mt-2 disabled:opacity-70">
+              <Check size={16} className="inline mr-1" /> {saving ? 'Salvando...' : 'Salvar alterações'}
+            </button>
+          </div>
+        )}
 
         <div className="mt-6 p-4 rounded-2xl bg-white border border-[#ece3c7]">
           <div className="font-bold text-[var(--bj-text)] mb-2">Sobre você</div>
