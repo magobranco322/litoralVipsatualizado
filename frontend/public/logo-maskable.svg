@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" fill="#0B2A5B"/>
+  <circle cx="256" cy="256" r="180" fill="#0B2A5B"/>
+  <g transform="translate(0,-8)">
+    <text x="256" y="220" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-weight="900" font-size="78" fill="#E8B800" letter-spacing="6">VIP</text>
+    <text x="256" y="268" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-weight="800" font-size="32" fill="#FBF3DF" letter-spacing="3">LITORAL</text>
+  </g>
+  <g transform="translate(150, 300)">
+    <path d="M32 48 L42 18 C46 10 54 6 62 6 L150 6 C158 6 166 10 170 18 L180 48 L196 48 C200 48 204 52 204 56 L204 86 C204 92 198 96 192 96 L184 96 L184 104 C184 112 176 118 168 118 L156 118 C148 118 140 112 140 104 L140 96 L72 96 L72 104 C72 112 64 118 56 118 L44 118 C36 118 28 112 28 104 L28 96 L20 96 C14 96 8 92 8 86 L8 56 C8 52 12 48 16 48 L32 48 Z" fill="#E8B800"/>
+    <circle cx="56" cy="72" r="11" fill="#0B2A5B"/>
+    <circle cx="156" cy="72" r="11" fill="#0B2A5B"/>
+  </g>
+</svg>

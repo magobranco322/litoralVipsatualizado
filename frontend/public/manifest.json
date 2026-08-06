@@ -1,0 +1,26 @@
+{
+  "short_name": "VIP Litoral",
+  "name": "Motoristas VIP Litoral",
+  "description": "Caronas & transfer pelo litoral - encontre motoristas verificados perto de você.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FBF3DF",
+  "theme_color": "#0B2A5B",
+  "lang": "pt-BR",
+  "icons": [
+    {
+      "src": "/logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/logo-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}

@@ -1,10 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Header from '../components/Header';
 import BottomNav from '../components/BottomNav';
+import IOSInstructions from '../components/IOSInstructions';
 import { useAuth } from '../context/AuthContext';
-import { Star, Car, UserRound, Shield, BadgeCheck, Phone, Mail, MapPin, Bell, HelpCircle, ChevronRight, Camera, PencilLine, Check, X, User as UserIcon } from 'lucide-react';
+import { Star, Car, UserRound, Shield, BadgeCheck, Phone, Mail, MapPin, Bell, HelpCircle, ChevronRight, Camera, PencilLine, Check, X, User as UserIcon, Download, Smartphone } from 'lucide-react';
 import { readImageAsDataUrl } from '../lib/image';
 import { useToast } from '../hooks/use-toast';
+import { usePWAInstall } from '../hooks/usePWAInstall';
 
 const DisplayRow = ({ icon: Icon, label, value, onEdit }) => (
   <button
@@ -34,6 +36,18 @@ const ProfilePage = () => {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ name: '', phone: '', city: '' });
   const [saving, setSaving] = useState(false);
+  const [iosOpen, setIosOpen] = useState(false);
+  const { canInstall, installed, isIOS, promptInstall } = usePWAInstall();
+
+  const handleInstall = async () => {
+    if (canInstall) {
+      const res = await promptInstall();
+      if (res.ok) toast({ title: 'App instalado!', description: 'Abra pelo atalho na sua tela inicial.' });
+      return;
+    }
+    // iOS ou navegador sem prompt automático: mostrar instruções
+    setIosOpen(true);
+  };
 
   useEffect(() => {
     if (user) setForm({ name: user.name || '', phone: user.phone || '', city: user.city || '' });
@@ -113,6 +127,25 @@ const ProfilePage = () => {
           </div>
         </div>
 
+        {!installed && (
+          <div className="mt-5 p-4 rounded-2xl bg-[var(--bj-navy)] text-white flex items-center gap-3">
+            <div className="w-11 h-11 rounded-xl bg-[var(--bj-yellow)] flex items-center justify-center flex-shrink-0">
+              <Smartphone size={22} className="text-[var(--bj-navy)]" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="font-extrabold leading-tight">Instalar na tela inicial</div>
+              <div className="text-xs opacity-80 mt-0.5">Acesse mais rápido, como um app.</div>
+            </div>
+            <button
+              onClick={handleInstall}
+              className="btn-yellow text-sm py-2 px-3 flex-shrink-0"
+              style={{ background: 'var(--bj-yellow)', color: 'var(--bj-navy)' }}
+            >
+              <Download size={14} className="inline mr-1" /> Instalar
+            </button>
+          </div>
+        )}
+
         <div className="mt-5 flex items-center justify-between">
           <h2 className="font-extrabold text-[var(--bj-text)]">Dados pessoais</h2>
           {!editing ? (
@@ -174,6 +207,7 @@ const ProfilePage = () => {
           </p>
         </div>
       </div>
+      <IOSInstructions open={iosOpen} onClose={() => setIosOpen(false)} />
       <BottomNav />
     </div>
   );
