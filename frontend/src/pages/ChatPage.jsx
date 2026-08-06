@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useParams } from 'react-router-dom';
 import Header from '../components/Header';
 import BottomNav from '../components/BottomNav';
 import { useTrips } from '../context/TripsContext';
@@ -9,12 +10,21 @@ import ReportDialog from '../components/ReportDialog';
 const ChatPage = () => {
   const { user } = useAuth();
   const { chats, sendMessage, markChatRead, refreshChats } = useTrips();
+  const { chatId: paramChatId } = useParams();
   const [activeId, setActiveId] = useState(null);
   const [text, setText] = useState('');
   const [query, setQuery] = useState('');
   const [sending, setSending] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const scrollRef = useRef(null);
+
+  useEffect(() => {
+    if (paramChatId) {
+      // ensure chats list is loaded, then open
+      refreshChats().then(() => setActiveId(paramChatId));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paramChatId]);
 
   const active = useMemo(() => chats.find((c) => c.id === activeId), [chats, activeId]);
 

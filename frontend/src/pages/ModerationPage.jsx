@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react';
 import Header from '../components/Header';
 import BottomNav from '../components/BottomNav';
 import { useAuth } from '../context/AuthContext';
-import { Shield, CheckCircle2, XCircle, AlertTriangle, UserCheck, MessageSquare, Car, Users, Ban, ShieldCheck, Trash2, MapPin, Clock, UserX } from 'lucide-react';
+import { Shield, CheckCircle2, XCircle, AlertTriangle, UserCheck, MessageSquare, Car, Users, Ban, ShieldCheck, Trash2, MapPin, Clock, UserX, MessageCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useToast } from '../hooks/use-toast';
 import api, { apiError } from '../lib/api';
 
@@ -14,6 +15,7 @@ const TabBtn = ({ active, onClick, icon: Icon, children }) => (
 
 const ModerationPage = () => {
   const { user, updateUserStatus } = useAuth();
+  const navigate = useNavigate();
   const [tab, setTab] = useState('aprovacoes');
   const [reports, setReports] = useState([]);
   const [pending, setPending] = useState([]);
@@ -95,6 +97,24 @@ const ModerationPage = () => {
       load();
     } catch (e) {
       toast({ title: 'Erro', description: apiError(e), variant: 'destructive' });
+    }
+  };
+
+  const messageUser = async (u) => {
+    const text = window.prompt(`Enviar mensagem para ${u.name} (${u.role}):`, 'Olá! Sou da moderação Motoristas VIP Litoral.');
+    if (text === null) return;
+    const clean = text.trim();
+    if (!clean) {
+      toast({ title: 'Digite uma mensagem', variant: 'destructive' });
+      return;
+    }
+    try {
+      const { data } = await api.post('/chats/message', { other_user_id: u.id, text: clean });
+      toast({ title: 'Mensagem enviada', description: `Aberto o chat com ${u.name}.` });
+      if (data && data.chat_id) navigate(`/chat/${data.chat_id}`);
+      else navigate('/chat');
+    } catch (e) {
+      toast({ title: 'Erro ao enviar', description: apiError(e), variant: 'destructive' });
     }
   };
 
@@ -274,7 +294,13 @@ const ModerationPage = () => {
                         {u.status}
                       </span>
                     </div>
-                    <div className="mt-3 grid grid-cols-2 gap-2">
+                    <div className="mt-3 grid grid-cols-3 gap-2">
+                      <button
+                        onClick={() => messageUser(u)}
+                        className="chip active justify-center py-2 text-sm"
+                      >
+                        <MessageCircle size={14} /> Mensagem
+                      </button>
                       <button
                         onClick={() => toggleUser(u)}
                         className="chip justify-center py-2 text-sm"
