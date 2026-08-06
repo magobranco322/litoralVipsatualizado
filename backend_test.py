@@ -1001,6 +1001,224 @@ def test_edge_duplicate_reservation():
     except Exception as e:
         log_test("Edge: Duplicate reservation returns 400", False, str(e))
 
+def test_admin_list_trips():
+    """Test 8.1: GET /admin/trips - list all trips including cancelled"""
+    try:
+        token = tokens.get("admin")
+        if not token:
+            log_test("Admin: List all trips", False, "No admin token available")
+            return
+        
+        response = requests.get(f"{BASE_URL}/admin/trips", 
+            headers={"Authorization": f"Bearer {token}"}
+        )
+        
+        if response.status_code == 200:
+            data = response.json()
+            if isinstance(data, list) and len(data) > 0:
+                log_test("Admin: List all trips", True)
+            else:
+                log_test("Admin: List all trips", False, "Expected list of trips")
+        else:
+            log_test("Admin: List all trips", False, f"Status {response.status_code}: {response.text}")
+    except Exception as e:
+        log_test("Admin: List all trips", False, str(e))
+
+def test_admin_delete_trip_setup():
+    """Test 8.2: Setup for trip deletion - create trip and reservation"""
+    try:
+        # Login as motorista and create a test trip
+        token_motorista = tokens.get("giovanna")
+        if not token_motorista:
+            log_test("Admin: Setup trip for deletion (create trip)", False, "No motorista token")
+            return
+        
+        response = requests.post(f"{BASE_URL}/trips", 
+            headers={"Authorization": f"Bearer {token_motorista}"},
+            json={
+                "origin": "TestOrigin",
+                "destination": "TestDest",
+                "date": "20/12/2026",
+                "time": "10:00",
+                "seats_total": 3,
+                "price": 50,
+                "pet_friendly": False,
+                "home_pickup": False
+            }
+        )
+        
+        if response.status_code == 200:
+            data = response.json()
+            trip_ids["test_delete"] = data["id"]
+            
+            # Now login as passageiro and reserve this trip
+            # First, need to login as the seeded passageiro
+            response_login = requests.post(f"{BASE_URL}/auth/login", json={
+                "email": "magobranco322@gmail.com",
+                "password": "123456"
+            })
+            
+            if response_login.status_code == 200:
+                tokens["passageiro_mago"] = response_login.json()["token"]
+                user_ids["passageiro_mago"] = response_login.json()["user"]["id"]
+                
+                # Create reservation
+                response_res = requests.post(f"{BASE_URL}/reservations", 
+                    headers={"Authorization": f"Bearer {tokens['passageiro_mago']}"},
+                    json={"trip_id": trip_ids["test_delete"]}
+                )
+                
+                if response_res.status_code == 200:
+                    reservation_ids["test_delete_res"] = response_res.json()["reservation"]["id"]
+                    log_test("Admin: Setup trip for deletion (create trip + reservation)", True)
+                else:
+                    log_test("Admin: Setup trip for deletion (create trip + reservation)", False, f"Reservation failed: {response_res.status_code}")
+            else:
+                log_test("Admin: Setup trip for deletion (create trip + reservation)", False, f"Passageiro login failed: {response_login.status_code}")
+        else:
+            log_test("Admin: Setup trip for deletion (create trip + reservation)", False, f"Trip creation failed: {response.status_code}")
+    except Exception as e:
+        log_test("Admin: Setup trip for deletion (create trip + reservation)", False, str(e))
+
+def test_admin_delete_trip():
+    """Test 8.3: DELETE /admin/trips/{trip_id} - delete trip and notify passengers"""
+    try:
+        token = tokens.get("admin")
+        trip_id = trip_ids.get("test_delete")
+        
+        if not token or not trip_id:
+            log_test("Admin: Delete trip and notify passengers", False, "Missing admin token or trip_id")
+            return
+        
+        response = requests.delete(f"{BASE_URL}/admin/trips/{trip_id}", 
+            headers={"Authorization": f"Bearer {token}"}
+        )
+        
+        if response.status_code == 200:
+            data = response.json()
+            if data.get("ok") and data.get("notified", 0) >= 1:
+                log_test("Admin: Delete trip and notify passengers", True)
+            else:
+                log_test("Admin: Delete trip and notify passengers", False, f"Expected ok=true and notified>=1, got {data}")
+        else:
+            log_test("Admin: Delete trip and notify passengers", False, f"Status {response.status_code}: {response.text}")
+    except Exception as e:
+        log_test("Admin: Delete trip and notify passengers", False, str(e))
+
+def test_admin_verify_trip_deleted():
+    """Test 8.4: Verify trip is removed from GET /admin/trips"""
+    try:
+        token = tokens.get("admin")
+        trip_id = trip_ids.get("test_delete")
+        
+        if not token or not trip_id:
+            log_test("Admin: Verify trip removed from list", False, "Missing admin token or trip_id")
+            return
+        
+        response = requests.get(f"{BASE_URL}/admin/trips", 
+            headers={"Authorization": f"Bearer {token}"}
+        )
+        
+        if response.status_code == 200:
+            data = response.json()
+            trip_exists = any(t.get("id") == trip_id for t in data)
+            if not trip_exists:
+                log_test("Admin: Verify trip removed from list", True)
+            else:
+                log_test("Admin: Verify trip removed from list", False, "Trip still exists in list")
+        else:
+            log_test("Admin: Verify trip removed from list", False, f"Status {response.status_code}: {response.text}")
+    except Exception as e:
+        log_test("Admin: Verify trip removed from list", False, str(e))
+
+def test_admin_verify_cancelamento_notification():
+    """Test 8.5: Verify passageiro received cancelamento notification"""
+    try:
+        token = tokens.get("passageiro_mago")
+        if not token:
+            log_test("Admin: Verify passageiro got cancelamento notification", False, "No passageiro token")
+            return
+        
+        response = requests.get(f"{BASE_URL}/notifications", 
+            headers={"Authorization": f"Bearer {token}"}
+        )
+        
+        if response.status_code == 200:
+            data = response.json()
+            cancelamento_notif = any(n.get("type") == "cancelamento" for n in data)
+            if cancelamento_notif:
+                log_test("Admin: Verify passageiro got cancelamento notification", True)
+            else:
+                log_test("Admin: Verify passageiro got cancelamento notification", False, "No cancelamento notification found")
+        else:
+            log_test("Admin: Verify passageiro got cancelamento notification", False, f"Status {response.status_code}: {response.text}")
+    except Exception as e:
+        log_test("Admin: Verify passageiro got cancelamento notification", False, str(e))
+
+def test_admin_verify_reservation_cancelled():
+    """Test 8.6: Verify reservation status is now 'cancelada'"""
+    try:
+        token = tokens.get("passageiro_mago")
+        if not token:
+            log_test("Admin: Verify reservation status is cancelada", False, "No passageiro token")
+            return
+        
+        response = requests.get(f"{BASE_URL}/reservations/mine", 
+            headers={"Authorization": f"Bearer {token}"}
+        )
+        
+        if response.status_code == 200:
+            data = response.json()
+            res_id = reservation_ids.get("test_delete_res")
+            cancelled_res = next((r for r in data if r.get("id") == res_id), None)
+            if cancelled_res and cancelled_res.get("status") == "cancelada":
+                log_test("Admin: Verify reservation status is cancelada", True)
+            else:
+                log_test("Admin: Verify reservation status is cancelada", False, f"Reservation not found or status not cancelada: {cancelled_res}")
+        else:
+            log_test("Admin: Verify reservation status is cancelada", False, f"Status {response.status_code}: {response.text}")
+    except Exception as e:
+        log_test("Admin: Verify reservation status is cancelada", False, str(e))
+
+def test_admin_delete_trip_non_admin():
+    """Test 8.7: Non-admin user tries to delete trip - should return 403"""
+    try:
+        token = tokens.get("giovanna")  # motorista, not admin
+        if not token:
+            log_test("Admin: Non-admin cannot delete trip (403)", False, "No motorista token")
+            return
+        
+        # Try to delete any trip
+        response = requests.delete(f"{BASE_URL}/admin/trips/some_id", 
+            headers={"Authorization": f"Bearer {token}"}
+        )
+        
+        if response.status_code == 403:
+            log_test("Admin: Non-admin cannot delete trip (403)", True)
+        else:
+            log_test("Admin: Non-admin cannot delete trip (403)", False, f"Expected 403, got {response.status_code}")
+    except Exception as e:
+        log_test("Admin: Non-admin cannot delete trip (403)", False, str(e))
+
+def test_admin_delete_nonexistent_trip():
+    """Test 8.8: Admin tries to delete nonexistent trip - should return 404"""
+    try:
+        token = tokens.get("admin")
+        if not token:
+            log_test("Admin: Delete nonexistent trip returns 404", False, "No admin token")
+            return
+        
+        response = requests.delete(f"{BASE_URL}/admin/trips/nonexistent_trip_id_12345", 
+            headers={"Authorization": f"Bearer {token}"}
+        )
+        
+        if response.status_code == 404:
+            log_test("Admin: Delete nonexistent trip returns 404", True)
+        else:
+            log_test("Admin: Delete nonexistent trip returns 404", False, f"Expected 404, got {response.status_code}")
+    except Exception as e:
+        log_test("Admin: Delete nonexistent trip returns 404", False, str(e))
+
 def print_summary():
     """Print test summary"""
     print("\n" + "="*80)
@@ -1086,6 +1304,17 @@ def main():
     test_edge_passageiro_admin_access()
     test_edge_reserve_own_trip()
     test_edge_duplicate_reservation()
+    
+    # 8. Admin trip management
+    print("\n=== 8. ADMIN TRIP MANAGEMENT ===")
+    test_admin_list_trips()
+    test_admin_delete_trip_setup()
+    test_admin_delete_trip()
+    test_admin_verify_trip_deleted()
+    test_admin_verify_cancelamento_notification()
+    test_admin_verify_reservation_cancelled()
+    test_admin_delete_trip_non_admin()
+    test_admin_delete_nonexistent_trip()
     
     # Print summary
     print_summary()

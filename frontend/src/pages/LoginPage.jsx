@@ -173,7 +173,6 @@ const LoginPage = () => {
           <div className="text-xs text-[var(--bj-text)] opacity-80 space-y-1">
             <div><b>Passageiro:</b> magobranco322@gmail.com / 123456</div>
             <div><b>Motorista:</b> giovanna@example.com / 123456</div>
-            <div><b>Admin:</b> admin@borajunto.com / admin</div>
           </div>
         </div>
       </div>

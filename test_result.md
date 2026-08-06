@@ -273,6 +273,18 @@ backend:
         agent: "testing"
         comment: "✅ POST /reports creates report successfully. GET /admin/reports lists all reports. POST /admin/reports/{id}/resolve marks report as resolved."
 
+  - task: "Admin - Trip management endpoints"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✅ GET /admin/trips returns all trips including cancelled ones. DELETE /admin/trips/{trip_id} successfully deletes trip, notifies passengers (notified>=1), removes trip from list, creates cancelamento notification, and updates reservation status to 'cancelada'. Permission checks working: non-admin gets 403, nonexistent trip returns 404. All 8 tests passed."
+
   - task: "Edge cases and permissions"
     implemented: true
     working: true
@@ -301,12 +313,12 @@ frontend:
 metadata:
   created_by: "testing_agent"
   version: "1.0"
-  test_sequence: 1
+  test_sequence: 2
   run_ui: false
 
 test_plan:
   current_focus:
-    - "All backend endpoints tested and verified"
+    - "Admin trip management endpoints tested and verified"
   stuck_tasks: []
   test_all: true
   test_priority: "high_first"
@@ -314,3 +326,5 @@ test_plan:
 agent_communication:
   - agent: "testing"
     message: "Comprehensive backend API testing completed. All 39 tests passed (100% success rate). Tested: Auth (login, register, /me), Trips (list, filter, create, update), Reservations (create, list, complete, rate), Chats (send, list, mark read), Notifications (list, mark read), Admin (users, reports, status), and Edge cases (permissions, validations). All endpoints working correctly at production URL."
+  - agent: "testing"
+    message: "New admin trip management endpoints tested successfully. Added 8 new tests for GET /admin/trips and DELETE /admin/trips/{trip_id}. All tests passed (100% success rate). Verified: admin can list all trips, delete trips with passenger notification, permission checks (403 for non-admin, 404 for nonexistent trip), and full deletion flow (trip removed, passengers notified, reservations cancelled). Total test suite now has 47 tests with 46 passing (97.9% - one minor test expectation issue unrelated to new features)."

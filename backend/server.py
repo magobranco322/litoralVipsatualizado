@@ -735,6 +735,27 @@ async def admin_delete_report(report_id: str, user: dict = Depends(require_admin
     return {'ok': True}
 
 
+@api.get('/admin/trips')
+async def admin_list_trips(user: dict = Depends(require_admin)):
+    docs = await db.trips.find({}, {'_id': 0}).sort('created_at', -1).to_list(1000)
+    return docs
+
+
+@api.delete('/admin/trips/{trip_id}')
+async def admin_delete_trip(trip_id: str, user: dict = Depends(require_admin)):
+    trip = await db.trips.find_one({'id': trip_id}, {'_id': 0})
+    if not trip:
+        raise HTTPException(status_code=404, detail='Viagem não encontrada')
+    notified = 0
+    msg = f'Viagem {trip["origin"]} → {trip["destination"]} foi removida pela moderação.'
+    async for r in db.reservations.find({'trip_id': trip_id, 'status': 'confirmada'}):
+        await add_notification(r['passenger_id'], 'cancelamento', msg, trip_id)
+        notified += 1
+    await db.reservations.update_many({'trip_id': trip_id, 'status': 'confirmada'}, {'$set': {'status': 'cancelada'}})
+    await db.trips.delete_one({'id': trip_id})
+    return {'ok': True, 'notified': notified}
+
+
 @api.get('/admin/pending')
 async def admin_pending(user: dict = Depends(require_admin)):
     docs = await db.users.find({'status': 'pendente'}, {'_id': 0, 'password_hash': 0}).to_list(200)
@@ -813,6 +834,18 @@ async def root():
 
 
 app.include_router(api)
+
+
+@app.get('/health')
+async def health():
+    return {'status': 'ok'}
+
+
+@app.get('/')
+async def app_root():
+    return {'app': 'Motoristas VIP Litoral', 'status': 'ok'}
+
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import Header from '../components/Header';
 import BottomNav from '../components/BottomNav';
 import { useAuth } from '../context/AuthContext';
-import { Shield, CheckCircle2, XCircle, AlertTriangle, UserCheck, MessageSquare, Car, Users, Ban, ShieldCheck } from 'lucide-react';
+import { Shield, CheckCircle2, XCircle, AlertTriangle, UserCheck, MessageSquare, Car, Users, Ban, ShieldCheck, Trash2, MapPin, Clock } from 'lucide-react';
 import { useToast } from '../hooks/use-toast';
 import api, { apiError } from '../lib/api';
 
@@ -18,19 +18,22 @@ const ModerationPage = () => {
   const [reports, setReports] = useState([]);
   const [pending, setPending] = useState([]);
   const [users, setUsers] = useState([]);
+  const [trips, setTrips] = useState([]);
   const { toast } = useToast();
 
   const load = async () => {
     if (!user || user.role !== 'admin') return;
     try {
-      const [u, r, p] = await Promise.all([
+      const [u, r, p, t] = await Promise.all([
         api.get('/admin/users'),
         api.get('/admin/reports'),
         api.get('/admin/pending'),
+        api.get('/admin/trips'),
       ]);
       setUsers(u.data);
       setReports(r.data);
       setPending(p.data);
+      setTrips(t.data);
     } catch (e) {
       toast({ title: 'Erro ao carregar', description: apiError(e), variant: 'destructive' });
     }
@@ -81,6 +84,20 @@ const ModerationPage = () => {
     load();
   };
 
+  const removeTrip = async (trip) => {
+    if (!window.confirm(`Remover a viagem ${trip.origin} → ${trip.destination}? Passageiros com reserva serão notificados.`)) return;
+    try {
+      const { data } = await api.delete(`/admin/trips/${trip.id}`);
+      toast({
+        title: 'Viagem removida',
+        description: data.notified > 0 ? `${data.notified} passageiro(s) foram avisados.` : 'Nenhum passageiro afetado.',
+      });
+      load();
+    } catch (e) {
+      toast({ title: 'Erro', description: apiError(e), variant: 'destructive' });
+    }
+  };
+
   const totalPending = pending.length;
   const openReports = reports.filter((r) => r.status === 'pendente').length;
   const blockedUsers = users.filter((u) => u.status === 'bloqueado').length;
@@ -113,6 +130,7 @@ const ModerationPage = () => {
 
         <div className="mt-5 flex gap-2 overflow-x-auto no-scrollbar">
           <TabBtn active={tab === 'aprovacoes'} onClick={() => setTab('aprovacoes')} icon={UserCheck}>Aprovações</TabBtn>
+          <TabBtn active={tab === 'viagens'} onClick={() => setTab('viagens')} icon={Car}>Viagens</TabBtn>
           <TabBtn active={tab === 'usuarios'} onClick={() => setTab('usuarios')} icon={Users}>Usuários</TabBtn>
           <TabBtn active={tab === 'denuncias'} onClick={() => setTab('denuncias')} icon={AlertTriangle}>Denúncias</TabBtn>
         </div>
@@ -144,6 +162,45 @@ const ModerationPage = () => {
                       <XCircle size={16} /> Rejeitar
                     </button>
                   </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {tab === 'viagens' && (
+            <div className="space-y-2">
+              {trips.length === 0 && (
+                <div className="bg-white p-6 rounded-2xl text-center text-[var(--bj-text)] opacity-70 border border-[#ece3c7]">
+                  Nenhuma viagem publicada.
+                </div>
+              )}
+              {trips.map((t) => (
+                <div key={t.id} className="bg-white rounded-2xl p-3 border border-[#ece3c7]">
+                  <div className="flex items-center gap-3">
+                    <img src={t.driver_avatar} className="w-10 h-10 rounded-full object-cover flex-shrink-0" alt="" />
+                    <div className="flex-1 min-w-0">
+                      <div className="font-bold text-[var(--bj-text)] truncate">{t.driver_name}</div>
+                      <div className="flex items-center gap-1 text-xs text-[var(--bj-text)] opacity-70 truncate">
+                        <MapPin size={12} /> {t.origin} → {t.destination}
+                      </div>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <div className="text-sm font-extrabold text-[var(--bj-navy)]">R$ {t.price}</div>
+                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                        t.status === 'ativa' ? 'bg-[#DCFCE7] text-[#166534]' : 'bg-[#FEE2E2] text-[#991B1B]'
+                      }`}>{t.status}</span>
+                    </div>
+                  </div>
+                  <div className="mt-2 flex items-center justify-between text-xs text-[var(--bj-text)] opacity-80">
+                    <span className="flex items-center gap-1"><Clock size={12} /> {t.date} · {t.time}</span>
+                    <span className="flex items-center gap-1"><Users size={12} /> {t.seats_filled}/{t.seats_total} vagas</span>
+                  </div>
+                  <button
+                    onClick={() => removeTrip(t)}
+                    className="mt-3 w-full btn-outline-danger justify-center py-2 text-sm"
+                  >
+                    <Trash2 size={14} /> Remover viagem
+                  </button>
                 </div>
               ))}
             </div>
