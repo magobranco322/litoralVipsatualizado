@@ -309,6 +309,18 @@ backend:
         agent: "testing"
         comment: "✅ All edge cases tested: Passageiro cannot access admin endpoints (403), motorista cannot reserve own trip (400), duplicate reservations prevented (400)."
 
+  - task: "Automatic trip expiration cleanup"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✅ Automatic trip expiration cleanup fully tested with 12 test cases, all passing (100% success rate). Verified: (1) Expired trip (01/01/2020) automatically deleted when GET /api/trips called; (2) Future trip (01/01/2099) remains after cleanup; (3) Reservation for expired trip marked as 'concluida' (not deleted) for rating purposes; (4) Cleanup triggered on both GET /api/trips and GET /api/admin/trips; (5) Recent trip within 3-hour grace period NOT deleted; (6) Timezone handling correct (Brazil UTC-3). Evidence: Expired trip ID 76a1c59c169643baadd904cac6549da2 deleted, Future trip ID f8e29981c1654a3ea1223f456367b378 exists, Reservation ID d55c4e26b1c74f34b9d377e119888470 status='concluida', Recent trip ID 4eb311835cf7438f87c89f49b4499d4d survived cleanup."
+
 frontend:
   - task: "Frontend UI components"
     implemented: true
@@ -325,12 +337,12 @@ frontend:
 metadata:
   created_by: "testing_agent"
   version: "1.0"
-  test_sequence: 3
+  test_sequence: 4
   run_ui: false
 
 test_plan:
   current_focus:
-    - "Admin cancel-trip endpoint (POST /admin/trips/{trip_id}/cancel) tested and verified"
+    - "Automatic trip expiration cleanup tested and verified"
   stuck_tasks: []
   test_all: true
   test_priority: "high_first"
@@ -342,3 +354,5 @@ agent_communication:
     message: "New admin trip management endpoints tested successfully. Added 8 new tests for GET /admin/trips and DELETE /admin/trips/{trip_id}. All tests passed (100% success rate). Verified: admin can list all trips, delete trips with passenger notification, permission checks (403 for non-admin, 404 for nonexistent trip), and full deletion flow (trip removed, passengers notified, reservations cancelled). Total test suite now has 47 tests with 46 passing (97.9% - one minor test expectation issue unrelated to new features)."
   - agent: "testing"
     message: "Admin cancel-trip endpoint (POST /admin/trips/{trip_id}/cancel) tested successfully. All 11 test cases passed (100% success rate). Key findings: (1) Trip is marked as 'cancelada' but NOT deleted from database; (2) Both driver and passenger receive cancelamento notifications with 'moderação' text; (3) Reservation status updated to 'cancelada'; (4) Idempotency works correctly - second cancel returns already_cancelled:true; (5) Permission checks working (403 for non-admin, 404 for nonexistent trip). Endpoint is production-ready."
+  - agent: "testing"
+    message: "Automatic trip expiration cleanup tested successfully. All 12 test cases passed (100% success rate). Verified: (1) Trips older than 3 hours past scheduled departure (Brazil UTC-3) are automatically deleted when GET /api/trips or GET /api/admin/trips is called; (2) Expired trip (01/01/2020) deleted correctly; (3) Future trip (01/01/2099) remains after cleanup; (4) Reservations for expired trips marked as 'concluida' (not deleted) so users can still rate; (5) Recent trips within 3-hour grace period NOT deleted; (6) Timezone handling correct. Feature is production-ready."

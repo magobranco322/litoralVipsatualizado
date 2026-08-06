@@ -22,6 +22,64 @@ JWT_SECRET = os.environ.get('JWT_SECRET', 'change_me')
 JWT_ALGO = 'HS256'
 JWT_TTL_HOURS = 24 * 30
 
+# Timezone helpers: date/time in trips are stored as Brazil local time (BRT = UTC-3).
+BRAZIL_TZ_OFFSET_HOURS = 3
+# Keep expired trips visible this many hours after their scheduled departure before deleting.
+TRIP_EXPIRE_GRACE_HOURS = 3
+
+_cleanup_running = False
+
+
+def _departure_utc(date_str: str, time_str: str):
+    """Parse a trip's date (DD/MM/YYYY) and time (HH:MM) as Brazil-local and return UTC datetime."""
+    if not date_str or not time_str:
+        return None
+    try:
+        parts = date_str.split('/')
+        if len(parts) != 3:
+            return None
+        d, m, y = int(parts[0]), int(parts[1]), int(parts[2])
+        hm = time_str.split(':')
+        h = int(hm[0]) if len(hm) >= 1 else 0
+        mi = int(hm[1]) if len(hm) >= 2 else 0
+        naive = datetime(y, m, d, h, mi)
+        return naive + timedelta(hours=BRAZIL_TZ_OFFSET_HOURS)
+    except Exception:
+        return None
+
+
+async def cleanup_expired_trips():
+    """Delete trips whose departure time (plus grace period) has passed.
+    Concurrent-safe via a simple module-level flag.
+    """
+    global _cleanup_running
+    if _cleanup_running:
+        return 0
+    _cleanup_running = True
+    removed = 0
+    try:
+        now_utc = datetime.utcnow()
+        threshold = now_utc - timedelta(hours=TRIP_EXPIRE_GRACE_HOURS)
+        cursor = db.trips.find({}, {'_id': 0, 'id': 1, 'date': 1, 'time': 1})
+        expired_ids = []
+        async for t in cursor:
+            dep = _departure_utc(t.get('date', ''), t.get('time', ''))
+            if dep is not None and dep < threshold:
+                expired_ids.append(t['id'])
+        for tid in expired_ids:
+            # Mark any confirmed reservation as concluida so history remains meaningful
+            await db.reservations.update_many(
+                {'trip_id': tid, 'status': 'confirmada'},
+                {'$set': {'status': 'concluida'}},
+            )
+            await db.trips.delete_one({'id': tid})
+            removed += 1
+        if removed:
+            logger.info(f'Expired trips cleanup: removed {removed}')
+    finally:
+        _cleanup_running = False
+    return removed
+
 client = AsyncIOMotorClient(MONGO_URL)
 db = client[DB_NAME]
 
@@ -374,6 +432,7 @@ async def list_trips(
     sort: Optional[str] = None,
     include_cancelled: bool = False,
 ):
+    await cleanup_expired_trips()
     q: dict = {}
     if not include_cancelled:
         q['status'] = 'ativa'
@@ -737,6 +796,7 @@ async def admin_delete_report(report_id: str, user: dict = Depends(require_admin
 
 @api.get('/admin/trips')
 async def admin_list_trips(user: dict = Depends(require_admin)):
+    await cleanup_expired_trips()
     docs = await db.trips.find({}, {'_id': 0}).sort('created_at', -1).to_list(1000)
     return docs
 
@@ -877,6 +937,7 @@ app.add_middleware(
 @app.on_event('startup')
 async def on_start():
     await seed_if_empty()
+    await cleanup_expired_trips()
 
 
 @app.on_event('shutdown')
