@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import './App.css';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -47,6 +47,12 @@ function AppRoutes() {
 }
 
 function App() {
+  useEffect(() => {
+    if (typeof window !== 'undefined' && typeof window.__hideVipSplash === 'function') {
+      window.__hideVipSplash();
+    }
+  }, []);
+
   return (
     <AuthProvider>
       <TripsProvider>

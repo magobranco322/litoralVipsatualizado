@@ -14,6 +14,61 @@
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@600&display=swap" rel="stylesheet" />
+        <style>
+          html, body { background: #FBF3DF; }
+          #vip-splash {
+            position: fixed; inset: 0; z-index: 9999;
+            background: #FBF3DF;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            gap: 22px;
+            transition: opacity 380ms ease, transform 380ms ease;
+            padding: 24px;
+          }
+          #vip-splash.hide { opacity: 0; pointer-events: none; }
+          #vip-splash .logo-wrap {
+            width: 132px; height: 132px;
+            border-radius: 30px;
+            background: #0B2A5B;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 24px 60px rgba(11,42,91,0.28);
+            animation: vip-pop 620ms cubic-bezier(.2,.9,.3,1.2);
+          }
+          #vip-splash .logo-wrap img { width: 88px; height: 88px; }
+          #vip-splash .brand {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            font-weight: 900; font-size: 22px; letter-spacing: 3px;
+            color: #0B2A5B; text-align: center; line-height: 1.1;
+            animation: vip-fade 700ms ease 120ms both;
+          }
+          #vip-splash .subtitle {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            font-size: 13px; color: #14213D; opacity: 0.7;
+            animation: vip-fade 700ms ease 220ms both;
+          }
+          #vip-splash .spinner {
+            width: 36px; height: 36px; border-radius: 50%;
+            border: 3px solid #ece3c7; border-top-color: #E8B800;
+            animation: vip-spin 900ms linear infinite;
+            margin-top: 6px;
+          }
+          #vip-splash .stripe {
+            position: absolute; left: 0; right: 0; height: 8px;
+            background-image: repeating-linear-gradient(-45deg, #0B2A5B 0 12px, #E8B800 12px 24px);
+          }
+          #vip-splash .stripe.top { top: 0; }
+          #vip-splash .stripe.bottom { bottom: 0; }
+          @keyframes vip-pop {
+            0% { transform: scale(0.6); opacity: 0; }
+            60% { transform: scale(1.06); opacity: 1; }
+            100% { transform: scale(1); }
+          }
+          @keyframes vip-fade {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+          }
+          @keyframes vip-spin { to { transform: rotate(360deg); } }
+        </style>
         <!--
         manifest.json provides metadata used when your web app is installed on a
         user's mobile device or desktop. See https://developers.google.com/web/fundamentals/web-app-manifest/
@@ -33,7 +88,33 @@
     </head>
     <body>
         <noscript>You need to enable JavaScript to run this app.</noscript>
+        <div id="vip-splash">
+          <div class="stripe top"></div>
+          <div class="logo-wrap"><img src="/logo.svg" alt="Motoristas VIP Litoral" /></div>
+          <div class="brand">MOTORISTAS<br/>VIP LITORAL</div>
+          <div class="subtitle">Caronas &amp; transfer pelo litoral</div>
+          <div class="spinner" role="status" aria-label="Carregando"></div>
+          <div class="stripe bottom"></div>
+        </div>
         <div id="root"></div>
+        <script>
+          (function () {
+            var MIN_MS = 700;
+            var start = Date.now();
+            function hideSplash() {
+              var s = document.getElementById('vip-splash');
+              if (!s) return;
+              var wait = Math.max(0, MIN_MS - (Date.now() - start));
+              setTimeout(function () {
+                s.classList.add('hide');
+                setTimeout(function () { if (s && s.parentNode) s.parentNode.removeChild(s); }, 450);
+              }, wait);
+            }
+            window.__hideVipSplash = hideSplash;
+            // Fallback: hide after 4s even if React fails to signal.
+            setTimeout(hideSplash, 4000);
+          })();
+        </script>
         <script>
           if ('serviceWorker' in navigator) {
             window.addEventListener('load', function () {
