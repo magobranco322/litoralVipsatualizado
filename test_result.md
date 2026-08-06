@@ -285,6 +285,18 @@ backend:
         agent: "testing"
         comment: "✅ GET /admin/trips returns all trips including cancelled ones. DELETE /admin/trips/{trip_id} successfully deletes trip, notifies passengers (notified>=1), removes trip from list, creates cancelamento notification, and updates reservation status to 'cancelada'. Permission checks working: non-admin gets 403, nonexistent trip returns 404. All 8 tests passed."
 
+  - task: "Admin - Cancel trip endpoint (POST /admin/trips/{trip_id}/cancel)"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✅ POST /admin/trips/{trip_id}/cancel endpoint fully tested with 11 test cases, all passing (100% success rate). Verified: (1) Trip cancellation with reason, notified=1; (2) Trip status set to 'cancelada' (NOT deleted); (3) Passenger receives cancelamento notification with 'moderação' text; (4) Driver receives cancelamento notification with 'moderação' text; (5) Reservation status updated to 'cancelada'; (6) Idempotency - calling cancel on already-cancelled trip returns ok:true, already_cancelled:true, notified=0; (7) Permission check - non-admin (motorista) gets 403; (8) Not found - nonexistent trip returns 404. All functionality working as expected."
+
   - task: "Edge cases and permissions"
     implemented: true
     working: true
@@ -313,12 +325,12 @@ frontend:
 metadata:
   created_by: "testing_agent"
   version: "1.0"
-  test_sequence: 2
+  test_sequence: 3
   run_ui: false
 
 test_plan:
   current_focus:
-    - "Admin trip management endpoints tested and verified"
+    - "Admin cancel-trip endpoint (POST /admin/trips/{trip_id}/cancel) tested and verified"
   stuck_tasks: []
   test_all: true
   test_priority: "high_first"
@@ -328,3 +340,5 @@ agent_communication:
     message: "Comprehensive backend API testing completed. All 39 tests passed (100% success rate). Tested: Auth (login, register, /me), Trips (list, filter, create, update), Reservations (create, list, complete, rate), Chats (send, list, mark read), Notifications (list, mark read), Admin (users, reports, status), and Edge cases (permissions, validations). All endpoints working correctly at production URL."
   - agent: "testing"
     message: "New admin trip management endpoints tested successfully. Added 8 new tests for GET /admin/trips and DELETE /admin/trips/{trip_id}. All tests passed (100% success rate). Verified: admin can list all trips, delete trips with passenger notification, permission checks (403 for non-admin, 404 for nonexistent trip), and full deletion flow (trip removed, passengers notified, reservations cancelled). Total test suite now has 47 tests with 46 passing (97.9% - one minor test expectation issue unrelated to new features)."
+  - agent: "testing"
+    message: "Admin cancel-trip endpoint (POST /admin/trips/{trip_id}/cancel) tested successfully. All 11 test cases passed (100% success rate). Key findings: (1) Trip is marked as 'cancelada' but NOT deleted from database; (2) Both driver and passenger receive cancelamento notifications with 'moderação' text; (3) Reservation status updated to 'cancelada'; (4) Idempotency works correctly - second cancel returns already_cancelled:true; (5) Permission checks working (403 for non-admin, 404 for nonexistent trip). Endpoint is production-ready."

@@ -85,12 +85,27 @@ const ModerationPage = () => {
   };
 
   const removeTrip = async (trip) => {
-    if (!window.confirm(`Remover a viagem ${trip.origin} → ${trip.destination}? Passageiros com reserva serão notificados.`)) return;
+    if (!window.confirm(`REMOVER permanentemente a viagem ${trip.origin} → ${trip.destination}? Esta ação não pode ser desfeita.`)) return;
     try {
       const { data } = await api.delete(`/admin/trips/${trip.id}`);
       toast({
         title: 'Viagem removida',
         description: data.notified > 0 ? `${data.notified} passageiro(s) foram avisados.` : 'Nenhum passageiro afetado.',
+      });
+      load();
+    } catch (e) {
+      toast({ title: 'Erro', description: apiError(e), variant: 'destructive' });
+    }
+  };
+
+  const cancelTripByAdmin = async (trip) => {
+    const reason = window.prompt(`Cancelar a viagem ${trip.origin} → ${trip.destination}?\n\nInforme o motivo (opcional):`, '');
+    if (reason === null) return; // user hit Cancel
+    try {
+      const { data } = await api.post(`/admin/trips/${trip.id}/cancel`, { reason: reason || null });
+      toast({
+        title: 'Viagem cancelada',
+        description: data.notified > 0 ? `${data.notified} passageiro(s) foram avisados.` : 'Motorista foi notificado.',
       });
       load();
     } catch (e) {
@@ -195,12 +210,21 @@ const ModerationPage = () => {
                     <span className="flex items-center gap-1"><Clock size={12} /> {t.date} · {t.time}</span>
                     <span className="flex items-center gap-1"><Users size={12} /> {t.seats_filled}/{t.seats_total} vagas</span>
                   </div>
-                  <button
-                    onClick={() => removeTrip(t)}
-                    className="mt-3 w-full btn-outline-danger justify-center py-2 text-sm"
-                  >
-                    <Trash2 size={14} /> Remover viagem
-                  </button>
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    <button
+                      onClick={() => cancelTripByAdmin(t)}
+                      disabled={t.status === 'cancelada'}
+                      className="chip justify-center py-2 text-sm disabled:opacity-50"
+                    >
+                      <XCircle size={14} /> Cancelar
+                    </button>
+                    <button
+                      onClick={() => removeTrip(t)}
+                      className="btn-outline-danger justify-center py-2 text-sm"
+                    >
+                      <Trash2 size={14} /> Remover
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>

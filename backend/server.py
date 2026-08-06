@@ -756,6 +756,25 @@ async def admin_delete_trip(trip_id: str, user: dict = Depends(require_admin)):
     return {'ok': True, 'notified': notified}
 
 
+@api.post('/admin/trips/{trip_id}/cancel')
+async def admin_cancel_trip(trip_id: str, payload: CancelTripIn, user: dict = Depends(require_admin)):
+    trip = await db.trips.find_one({'id': trip_id}, {'_id': 0})
+    if not trip:
+        raise HTTPException(status_code=404, detail='Viagem não encontrada')
+    if trip['status'] == 'cancelada':
+        return {'ok': True, 'notified': 0, 'already_cancelled': True}
+    await db.trips.update_one({'id': trip_id}, {'$set': {'status': 'cancelada', 'seats_filled': 0}})
+    reason = (payload.reason or '').strip()
+    msg = f'Viagem {trip["origin"]} → {trip["destination"]} foi cancelada pela moderação' + (f'. Motivo: {reason}' if reason else '.')
+    notified = 0
+    async for r in db.reservations.find({'trip_id': trip_id, 'status': 'confirmada'}):
+        await add_notification(r['passenger_id'], 'cancelamento', msg, trip_id)
+        notified += 1
+    await add_notification(trip['driver_id'], 'cancelamento', f'Sua viagem {trip["origin"]} → {trip["destination"]} foi cancelada pela moderação' + (f'. Motivo: {reason}' if reason else '.'), trip_id)
+    await db.reservations.update_many({'trip_id': trip_id, 'status': 'confirmada'}, {'$set': {'status': 'cancelada'}})
+    return {'ok': True, 'notified': notified}
+
+
 @api.get('/admin/pending')
 async def admin_pending(user: dict = Depends(require_admin)):
     docs = await db.users.find({'status': 'pendente'}, {'_id': 0, 'password_hash': 0}).to_list(200)
