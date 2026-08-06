@@ -7,7 +7,7 @@ import { useTrips } from '../context/TripsContext';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { CITIES } from '../mock';
-import { PawPrint, Home, MapPin, ArrowUpDown, Plus, Calendar, X, ArrowRightLeft } from 'lucide-react';
+import { PawPrint, Home, MapPin, ArrowUpDown, Plus, Calendar, X, ArrowRightLeft, Search as SearchIcon } from 'lucide-react';
 
 const FilterChip = ({ active, onClick, icon: Icon, children }) => (
   <button className={`chip ${active ? 'active' : ''}`} onClick={onClick}>
@@ -17,7 +17,7 @@ const FilterChip = ({ active, onClick, icon: Icon, children }) => (
 );
 
 const SearchPage = () => {
-  const { trips } = useTrips();
+  const { trips, refreshTrips } = useTrips();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [originFilter, setOriginFilter] = useState('');
@@ -27,6 +27,23 @@ const SearchPage = () => {
   const [sortOpen, setSortOpen] = useState(false);
   const [dateFilter, setDateFilter] = useState('');
   const [selectedTrip, setSelectedTrip] = useState(null);
+  const [searching, setSearching] = useState(false);
+
+  const doSearch = async () => {
+    setSearching(true);
+    const params = {};
+    if (originFilter.trim()) params.origin = originFilter.trim();
+    if (destFilter.trim()) params.destination = destFilter.trim();
+    if (dateFilter) {
+      const [y, m, d] = dateFilter.split('-');
+      params.date = `${d}/${m}/${y}`;
+    }
+    if (filters.pet) params.pet = true;
+    if (filters.home) params.home = true;
+    if (sort !== 'date') params.sort = sort;
+    await refreshTrips(params);
+    setSearching(false);
+  };
 
   // Available cities from trips + mock CITIES list
   const availableCities = useMemo(() => {
@@ -176,6 +193,16 @@ const SearchPage = () => {
           <FilterChip active={filters.home} onClick={() => setFilters({ ...filters, home: !filters.home })} icon={Home}>Busca em casa</FilterChip>
           <FilterChip active={filters.near} onClick={() => setFilters({ ...filters, near: !filters.near })} icon={MapPin}>Próximo a mim</FilterChip>
         </div>
+
+        <button
+          type="button"
+          onClick={doSearch}
+          disabled={searching}
+          className="btn-primary w-full mt-4 flex items-center justify-center gap-2 disabled:opacity-70"
+        >
+          <SearchIcon size={18} />
+          {searching ? 'Buscando...' : 'Buscar viagens'}
+        </button>
 
         <div className="flex items-center justify-between mt-6 mb-3">
           <div className="text-[var(--bj-text)] opacity-80">{filtered.length} viagens encontradas</div>

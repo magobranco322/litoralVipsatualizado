@@ -16,13 +16,13 @@ const TripDetailDialog = ({ trip, onClose }) => {
   const seatsLeft = trip.seatsTotal - trip.seatsFilled;
   const isOwn = user?.id === trip.driverId;
 
-  const handleReserve = () => {
+  const handleReserve = async () => {
     if (!user) return;
     if (user.role === 'admin') {
       toast({ title: 'Admins não reservam viagens', variant: 'destructive' });
       return;
     }
-    const res = reserveSeat(trip.id, user, users);
+    const res = await reserveSeat(trip.id);
     if (!res.ok) {
       toast({ title: 'Não foi possível reservar', description: res.message, variant: 'destructive' });
       return;

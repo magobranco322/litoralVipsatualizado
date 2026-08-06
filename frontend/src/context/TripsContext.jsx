@@ -1,235 +1,270 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { MOCK_TRIPS, MOCK_CHATS } from '../mock';
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
+import api, { apiError } from '../lib/api';
+import { useAuth } from './AuthContext';
 
 const TripsContext = createContext(null);
 
-const STORAGE_TRIPS = 'bj_trips';
-const STORAGE_RES = 'bj_reservations';
-const STORAGE_CHATS = 'bj_chats';
-const STORAGE_RATINGS = 'bj_ratings';
-const STORAGE_NOTIFS = 'bj_notifications';
+const POLL_MS = 15000;
 
-const read = (key, fallback) => {
-  try {
-    const s = localStorage.getItem(key);
-    return s ? JSON.parse(s) : fallback;
-  } catch (e) {
-    return fallback;
-  }
-};
+const normalizeTrip = (t) => ({
+  id: t.id,
+  driverId: t.driver_id,
+  driverName: t.driver_name,
+  driverAvatar: t.driver_avatar,
+  origin: t.origin,
+  destination: t.destination,
+  date: t.date,
+  time: t.time,
+  seatsTotal: t.seats_total,
+  seatsFilled: t.seats_filled,
+  price: t.price,
+  petFriendly: !!t.pet_friendly,
+  homePickup: !!t.home_pickup,
+  status: t.status,
+  rating: Number(t.rating || 0),
+  driverTrips: Number(t.driver_trips || 0),
+});
+
+const normalizeReservation = (r) => ({
+  id: r.id,
+  tripId: r.trip_id,
+  passengerId: r.passenger_id,
+  driverId: r.driver_id,
+  status: r.status,
+  ratingGiven: !!r.rating_given,
+  ratingScore: r.rating_score,
+  ratingComment: r.rating_comment,
+});
+
+const normalizeChat = (c) => ({
+  id: c.id,
+  otherUserId: c.other_user_id,
+  otherUserName: c.other_user_name,
+  otherUserAvatar: c.other_user_avatar,
+  lastMessage: c.last_message,
+  lastTime: c.last_time,
+  unread: c.unread || 0,
+  messages: (c.messages || []).map((m) => ({
+    id: m.id,
+    senderId: m.sender_id,
+    text: m.text,
+    time: new Date(m.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+  })),
+});
+
+const normalizeNotif = (n) => ({
+  id: n.id,
+  userId: n.user_id,
+  type: n.type,
+  message: n.message,
+  tripId: n.trip_id,
+  at: n.created_at,
+  read: !!n.read,
+});
 
 export const TripsProvider = ({ children }) => {
-  const [trips, setTrips] = useState(() => read(STORAGE_TRIPS, MOCK_TRIPS));
-  const [reservations, setReservations] = useState(() => read(STORAGE_RES, []));
-  const [ratings, setRatings] = useState(() => read(STORAGE_RATINGS, {}));
-  const [notifications, setNotifications] = useState(() => read(STORAGE_NOTIFS, []));
+  const { user } = useAuth();
+  const [trips, setTrips] = useState([]);
+  const [reservations, setReservations] = useState([]);
+  const [notifications, setNotifications] = useState([]);
+  const [chats, setChats] = useState([]);
+  const pollRef = useRef(null);
 
-  useEffect(() => { localStorage.setItem(STORAGE_TRIPS, JSON.stringify(trips)); }, [trips]);
-  useEffect(() => { localStorage.setItem(STORAGE_RES, JSON.stringify(reservations)); }, [reservations]);
-  useEffect(() => { localStorage.setItem(STORAGE_RATINGS, JSON.stringify(ratings)); }, [ratings]);
-  useEffect(() => { localStorage.setItem(STORAGE_NOTIFS, JSON.stringify(notifications)); }, [notifications]);
+  const refreshTrips = useCallback(async (params) => {
+    try {
+      const { data } = await api.get('/trips', { params });
+      setTrips((data || []).map(normalizeTrip));
+    } catch (e) { /* ignore */ }
+  }, []);
 
-  const pushNotification = (userId, type, message, tripId) => {
-    if (!userId) return;
-    const notif = {
-      id: 'n_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
-      userId, type, message, tripId,
-      at: new Date().toISOString(),
-      read: false,
-    };
-    setNotifications((prev) => [notif, ...prev]);
-  };
+  const refreshReservations = useCallback(async () => {
+    if (!user) { setReservations([]); return; }
+    try {
+      const paths = ['/reservations/mine'];
+      if (user.role === 'motorista') paths.push('/reservations/incoming');
+      const responses = await Promise.all(paths.map((p) => api.get(p)));
+      const merged = [];
+      const seen = new Set();
+      responses.forEach((r) => (r.data || []).forEach((res) => {
+        if (!seen.has(res.id)) { seen.add(res.id); merged.push(normalizeReservation(res)); }
+      }));
+      setReservations(merged);
+    } catch (e) { /* ignore */ }
+  }, [user]);
 
-  const getNotificationsFor = (userId) =>
-    notifications.filter((n) => n.userId === userId).sort((a, b) => (a.at < b.at ? 1 : -1));
+  const refreshNotifications = useCallback(async () => {
+    if (!user) { setNotifications([]); return; }
+    try {
+      const { data } = await api.get('/notifications');
+      setNotifications((data || []).map(normalizeNotif));
+    } catch (e) { /* ignore */ }
+  }, [user]);
 
-  const markAllNotificationsRead = (userId) => {
-    setNotifications((prev) => prev.map((n) => (n.userId === userId ? { ...n, read: true } : n)));
-  };
+  const refreshChats = useCallback(async () => {
+    if (!user) { setChats([]); return; }
+    try {
+      const { data } = await api.get('/chats');
+      setChats((data || []).map(normalizeChat));
+    } catch (e) { /* ignore */ }
+  }, [user]);
 
-  const clearNotifications = (userId) => {
-    setNotifications((prev) => prev.filter((n) => n.userId !== userId));
-  };
+  const refreshAll = useCallback(async () => {
+    await Promise.all([refreshTrips(), refreshReservations(), refreshNotifications(), refreshChats()]);
+  }, [refreshTrips, refreshReservations, refreshNotifications, refreshChats]);
 
-  const publishTrip = (driver, form) => {
-    const newTrip = {
-      id: 't_' + Date.now(),
-      driverId: driver.id,
-      driverName: driver.name,
-      driverAvatar: driver.avatar,
-      rating: driver.rating || 0,
-      driverTrips: driver.trips || 0,
-      origin: form.origin,
-      destination: form.destination,
-      date: form.date,
-      time: form.time,
-      seatsTotal: Number(form.seatsTotal),
-      seatsFilled: 0,
-      price: Number(form.price),
-      petFriendly: !!form.petFriendly,
-      homePickup: !!form.homePickup,
-      status: 'ativa',
-    };
-    setTrips((prev) => [newTrip, ...prev]);
-    return newTrip;
-  };
+  useEffect(() => {
+    refreshTrips();
+  }, [refreshTrips]);
 
-  const ensureChatWith = (currentUser, otherUser, initialText) => {
-    const chats = read(STORAGE_CHATS, MOCK_CHATS);
-    const found = chats.find(
-      (c) => c.participants && c.participants.includes(currentUser.id) && c.otherUserId === otherUser.id
-    );
-    if (found) return found.id;
-
-    const chatId = 'c_' + Date.now();
-    const newChat = {
-      id: chatId,
-      participants: [currentUser.id, otherUser.id],
-      otherUserId: otherUser.id,
-      otherUserName: otherUser.name,
-      otherUserAvatar: otherUser.avatar,
-      lastMessage: initialText || 'Olá! Reservei uma vaga na sua viagem.',
-      lastTime: 'agora',
-      unread: 0,
-      messages: [
-        {
-          id: 'm_' + Date.now(),
-          senderId: currentUser.id,
-          text: initialText || 'Olá! Reservei uma vaga na sua viagem.',
-          time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-        },
-      ],
-    };
-    localStorage.setItem(STORAGE_CHATS, JSON.stringify([newChat, ...chats]));
-    return chatId;
-  };
-
-  const reserveSeat = (tripId, passenger, allUsers) => {
-    const trip = trips.find((t) => t.id === tripId);
-    if (!trip) return { ok: false, message: 'Viagem não encontrada' };
-    if (trip.seatsFilled >= trip.seatsTotal) return { ok: false, message: 'Sem vagas disponíveis' };
-    if (trip.driverId === passenger.id) return { ok: false, message: 'Você não pode reservar sua própria viagem' };
-    if (reservations.some((r) => r.tripId === tripId && r.passengerId === passenger.id && r.status !== 'cancelada')) {
-      return { ok: false, message: 'Você já tem reserva nesta viagem' };
+  useEffect(() => {
+    if (user) {
+      refreshReservations();
+      refreshNotifications();
+      refreshChats();
+    } else {
+      setReservations([]);
+      setNotifications([]);
+      setChats([]);
     }
+  }, [user, refreshReservations, refreshNotifications, refreshChats]);
 
-    setTrips((prev) => prev.map((t) => (t.id === tripId ? { ...t, seatsFilled: t.seatsFilled + 1 } : t)));
+  // Polling for updates while logged in
+  useEffect(() => {
+    if (!user) return undefined;
+    pollRef.current = setInterval(() => {
+      refreshTrips();
+      refreshReservations();
+      refreshNotifications();
+      refreshChats();
+    }, POLL_MS);
+    return () => { if (pollRef.current) clearInterval(pollRef.current); };
+  }, [user, refreshTrips, refreshReservations, refreshNotifications, refreshChats]);
 
-    const newRes = {
-      id: 'r_' + Date.now(),
-      tripId,
-      passengerId: passenger.id,
-      driverId: trip.driverId,
-      status: 'confirmada',
-      createdAt: new Date().toISOString(),
-    };
-    setReservations((prev) => [newRes, ...prev]);
-
-    const driver = (allUsers || []).find((u) => u.id === trip.driverId) || {
-      id: trip.driverId,
-      name: trip.driverName,
-      avatar: trip.driverAvatar,
-    };
-    const chatId = ensureChatWith(
-      passenger,
-      driver,
-      `Olá! Acabei de reservar 1 vaga na viagem ${trip.origin} → ${trip.destination} (${trip.date} · ${trip.time}).`
-    );
-
-    pushNotification(
-      trip.driverId,
-      'reserva',
-      `${passenger.name} reservou 1 vaga em ${trip.origin} → ${trip.destination}.`,
-      trip.id
-    );
-
-    return { ok: true, chatId, reservation: newRes };
-  };
-
-  const updateTrip = (tripId, changes) => {
-    const trip = trips.find((t) => t.id === tripId);
-    if (!trip) return { ok: false, message: 'Viagem não encontrada' };
-    const updated = { ...trip, ...changes };
-    setTrips((prev) => prev.map((t) => (t.id === tripId ? updated : t)));
-
-    const affected = reservations.filter((r) => r.tripId === tripId && r.status === 'confirmada');
-    const parts = [];
-    if (changes.time && changes.time !== trip.time) parts.push(`novo horário ${changes.time}`);
-    if (changes.date && changes.date !== trip.date) parts.push(`nova data ${changes.date}`);
-    if (changes.price !== undefined && Number(changes.price) !== trip.price) parts.push(`novo preço R$ ${changes.price}`);
-    const msg = parts.length
-      ? `Viagem ${trip.origin} → ${trip.destination} foi atualizada: ${parts.join(', ')}.`
-      : `Viagem ${trip.origin} → ${trip.destination} foi atualizada.`;
-    affected.forEach((r) => pushNotification(r.passengerId, 'alteracao', msg, tripId));
-
-    return { ok: true, trip: updated, notified: affected.length };
-  };
-
-  const cancelTrip = (tripId, reason) => {
-    const trip = trips.find((t) => t.id === tripId);
-    if (!trip) return { ok: false, message: 'Viagem não encontrada' };
-    setTrips((prev) => prev.map((t) => (t.id === tripId ? { ...t, status: 'cancelada', seatsFilled: 0 } : t)));
-
-    const affected = reservations.filter((r) => r.tripId === tripId && r.status === 'confirmada');
-    setReservations((prev) => prev.map((r) => (r.tripId === tripId && r.status === 'confirmada' ? { ...r, status: 'cancelada' } : r)));
-    const msg = `Viagem ${trip.origin} → ${trip.destination} foi cancelada pelo motorista${reason ? `. Motivo: ${reason}` : '.'}`;
-    affected.forEach((r) => pushNotification(r.passengerId, 'cancelamento', msg, tripId));
-
-    return { ok: true, notified: affected.length };
-  };
-
-  const cancelReservation = (reservationId) => {
-    const res = reservations.find((r) => r.id === reservationId);
-    if (!res || res.status === 'cancelada') return;
-    setReservations((prev) => prev.map((r) => (r.id === reservationId ? { ...r, status: 'cancelada' } : r)));
-    setTrips((prev) => prev.map((t) => (t.id === res.tripId ? { ...t, seatsFilled: Math.max(0, t.seatsFilled - 1) } : t)));
-    const trip = trips.find((t) => t.id === res.tripId);
-    if (trip) {
-      pushNotification(
-        trip.driverId,
-        'cancelamento',
-        `Um passageiro cancelou a reserva em ${trip.origin} → ${trip.destination}.`,
-        trip.id
-      );
+  const publishTrip = async (_driver, form) => {
+    try {
+      const payload = {
+        origin: form.origin, destination: form.destination,
+        date: form.date, time: form.time,
+        seats_total: Number(form.seatsTotal),
+        price: Number(form.price),
+        pet_friendly: !!form.petFriendly, home_pickup: !!form.homePickup,
+      };
+      const { data } = await api.post('/trips', payload);
+      await refreshTrips();
+      return { ok: true, trip: data };
+    } catch (e) {
+      return { ok: false, message: apiError(e) };
     }
   };
 
-  const completeReservation = (reservationId) => {
-    setReservations((prev) => prev.map((r) => (r.id === reservationId ? { ...r, status: 'concluida' } : r)));
-  };
-
-  const rateReservation = (reservationId, score, comment, updateUser) => {
-    const res = reservations.find((r) => r.id === reservationId);
-    if (!res) return;
-    const driverId = res.driverId;
-    const prevList = ratings[driverId] || [];
-    const newList = [...prevList, { score: Number(score), comment, at: new Date().toISOString(), reservationId }];
-    const nextRatings = { ...ratings, [driverId]: newList };
-    setRatings(nextRatings);
-
-    const avg = newList.reduce((s, x) => s + x.score, 0) / newList.length;
-    setTrips((prev) =>
-      prev.map((t) => (t.driverId === driverId ? { ...t, rating: Number(avg.toFixed(1)), driverTrips: (t.driverTrips || 0) } : t))
-    );
-    if (typeof updateUser === 'function') {
-      updateUser(driverId, { rating: Number(avg.toFixed(1)), trips: (newList.length) });
+  const reserveSeat = async (tripId) => {
+    try {
+      const { data } = await api.post('/reservations', { trip_id: tripId });
+      await Promise.all([refreshTrips(), refreshReservations(), refreshChats(), refreshNotifications()]);
+      return { ok: true, chatId: data.chat_id, reservation: data.reservation };
+    } catch (e) {
+      return { ok: false, message: apiError(e) };
     }
-
-    setReservations((prev) =>
-      prev.map((r) => (r.id === reservationId ? { ...r, status: 'concluida', ratingGiven: true, ratingScore: score, ratingComment: comment } : r))
-    );
   };
 
-  const getRatings = (driverId) => ratings[driverId] || [];
+  const cancelReservation = async (reservationId) => {
+    try {
+      await api.post(`/reservations/${reservationId}/cancel`);
+      await Promise.all([refreshTrips(), refreshReservations()]);
+    } catch (e) { /* ignore */ }
+  };
+
+  const completeReservation = async (reservationId) => {
+    try {
+      await api.post(`/reservations/${reservationId}/complete`);
+      await refreshReservations();
+    } catch (e) { /* ignore */ }
+  };
+
+  const rateReservation = async (reservationId, score, comment) => {
+    try {
+      await api.post(`/reservations/${reservationId}/rate`, { score, comment });
+      await Promise.all([refreshReservations(), refreshTrips()]);
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, message: apiError(e) };
+    }
+  };
+
+  const updateTrip = async (tripId, changes) => {
+    try {
+      const payload = {};
+      if (changes.date !== undefined) payload.date = changes.date;
+      if (changes.time !== undefined) payload.time = changes.time;
+      if (changes.price !== undefined) payload.price = Number(changes.price);
+      const { data } = await api.patch(`/trips/${tripId}`, payload);
+      await refreshTrips();
+      return { ok: true, trip: data.trip, notified: data.notified };
+    } catch (e) {
+      return { ok: false, message: apiError(e) };
+    }
+  };
+
+  const cancelTrip = async (tripId, reason) => {
+    try {
+      const { data } = await api.post(`/trips/${tripId}/cancel`, { reason });
+      await Promise.all([refreshTrips(), refreshReservations()]);
+      return { ok: true, notified: data.notified };
+    } catch (e) {
+      return { ok: false, message: apiError(e) };
+    }
+  };
+
+  const ensureChatWith = async (otherUserId, initialMessage) => {
+    try {
+      const { data } = await api.post('/chats/ensure', { other_user_id: otherUserId, initial_message: initialMessage });
+      await refreshChats();
+      return data.chat_id;
+    } catch (e) {
+      return null;
+    }
+  };
+
+  const sendMessage = async (chatId, text) => {
+    try {
+      await api.post('/chats/message', { chat_id: chatId, text });
+      await refreshChats();
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, message: apiError(e) };
+    }
+  };
+
+  const markChatRead = async (chatId) => {
+    try {
+      await api.post(`/chats/${chatId}/read`);
+      await refreshChats();
+    } catch (e) { /* ignore */ }
+  };
+
+  const getNotificationsFor = () => notifications;
+  const markAllNotificationsRead = async () => {
+    try {
+      await api.post('/notifications/read');
+      await refreshNotifications();
+    } catch (e) { /* ignore */ }
+  };
+  const clearNotifications = async () => {
+    try {
+      await api.delete('/notifications');
+      await refreshNotifications();
+    } catch (e) { /* ignore */ }
+  };
 
   return (
     <TripsContext.Provider
       value={{
-        trips, reservations, notifications,
+        trips, reservations, notifications, chats,
         publishTrip, reserveSeat, cancelReservation, completeReservation, rateReservation,
         updateTrip, cancelTrip,
-        ensureChatWith, getRatings,
-        pushNotification, getNotificationsFor, markAllNotificationsRead, clearNotifications,
+        ensureChatWith, sendMessage, markChatRead,
+        getNotificationsFor, markAllNotificationsRead, clearNotifications,
+        refreshTrips, refreshAll, refreshReservations, refreshChats, refreshNotifications,
       }}
     >
       {children}

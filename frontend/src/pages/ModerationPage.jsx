@@ -1,48 +1,84 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Header from '../components/Header';
 import BottomNav from '../components/BottomNav';
 import { useAuth } from '../context/AuthContext';
-import { MOCK_REPORTS, MOCK_PENDING_APPROVALS } from '../mock';
 import { Shield, CheckCircle2, XCircle, AlertTriangle, UserCheck, MessageSquare, Car, Users, Ban, ShieldCheck } from 'lucide-react';
 import { useToast } from '../hooks/use-toast';
+import api, { apiError } from '../lib/api';
 
 const TabBtn = ({ active, onClick, icon: Icon, children }) => (
-  <button
-    onClick={onClick}
-    className={`chip flex-1 justify-center ${active ? 'active' : ''}`}
-  >
+  <button onClick={onClick} className={`chip flex-1 justify-center ${active ? 'active' : ''}`}>
     <Icon size={16} /> {children}
   </button>
 );
 
 const ModerationPage = () => {
-  const { users, updateUserStatus } = useAuth();
+  const { user, updateUserStatus } = useAuth();
   const [tab, setTab] = useState('aprovacoes');
-  const [reports, setReports] = useState(MOCK_REPORTS);
-  const [pending, setPending] = useState(MOCK_PENDING_APPROVALS);
+  const [reports, setReports] = useState([]);
+  const [pending, setPending] = useState([]);
+  const [users, setUsers] = useState([]);
   const { toast } = useToast();
 
-  const approve = (id) => {
-    setPending((p) => p.filter((x) => x.id !== id));
-    toast({ title: 'Cadastro aprovado' });
-  };
-  const rejectPending = (id) => {
-    setPending((p) => p.filter((x) => x.id !== id));
-    toast({ title: 'Cadastro rejeitado', variant: 'destructive' });
-  };
-  const resolveReport = (id) => {
-    setReports((r) => r.map((x) => (x.id === id ? { ...x, status: 'resolvida' } : x)));
-    toast({ title: 'Denúncia resolvida' });
-  };
-  const dismissReport = (id) => {
-    setReports((r) => r.filter((x) => x.id !== id));
-    toast({ title: 'Denúncia descartada' });
+  const load = async () => {
+    if (!user || user.role !== 'admin') return;
+    try {
+      const [u, r, p] = await Promise.all([
+        api.get('/admin/users'),
+        api.get('/admin/reports'),
+        api.get('/admin/pending'),
+      ]);
+      setUsers(u.data);
+      setReports(r.data);
+      setPending(p.data);
+    } catch (e) {
+      toast({ title: 'Erro ao carregar', description: apiError(e), variant: 'destructive' });
+    }
   };
 
-  const toggleUser = (u) => {
+  useEffect(() => { load(); /* eslint-disable-next-line */ }, [user]);
+
+  const approve = async (uid) => {
+    try {
+      await api.post(`/admin/pending/${uid}/approve`);
+      toast({ title: 'Cadastro aprovado' });
+      load();
+    } catch (e) {
+      toast({ title: 'Erro', description: apiError(e), variant: 'destructive' });
+    }
+  };
+  const rejectPending = async (uid) => {
+    try {
+      await api.post(`/admin/pending/${uid}/reject`);
+      toast({ title: 'Cadastro rejeitado', variant: 'destructive' });
+      load();
+    } catch (e) {
+      toast({ title: 'Erro', description: apiError(e), variant: 'destructive' });
+    }
+  };
+  const resolveReport = async (id) => {
+    try {
+      await api.post(`/admin/reports/${id}/resolve`);
+      toast({ title: 'Denúncia resolvida' });
+      load();
+    } catch (e) {
+      toast({ title: 'Erro', description: apiError(e), variant: 'destructive' });
+    }
+  };
+  const dismissReport = async (id) => {
+    try {
+      await api.delete(`/admin/reports/${id}`);
+      toast({ title: 'Denúncia descartada' });
+      load();
+    } catch (e) {
+      toast({ title: 'Erro', description: apiError(e), variant: 'destructive' });
+    }
+  };
+  const toggleUser = async (u) => {
     const next = u.status === 'ativo' ? 'bloqueado' : 'ativo';
-    updateUserStatus(u.id, next);
+    await updateUserStatus(u.id, next);
     toast({ title: next === 'bloqueado' ? 'Usuário bloqueado' : 'Usuário reativado' });
+    load();
   };
 
   const totalPending = pending.length;
@@ -100,11 +136,6 @@ const ModerationPage = () => {
                       {p.role === 'motorista' ? <Car size={12} /> : <Users size={12} />} {p.role}
                     </span>
                   </div>
-                  <div className="mt-2 flex flex-wrap gap-1.5">
-                    {p.documents.map((d) => (
-                      <span key={d} className="text-[11px] px-2 py-1 bg-[var(--bj-cream)] rounded-md text-[var(--bj-text)] opacity-80">{d}</span>
-                    ))}
-                  </div>
                   <div className="mt-3 flex gap-2">
                     <button onClick={() => approve(p.id)} className="flex-1 btn-primary text-sm py-2.5">
                       <CheckCircle2 size={16} className="inline mr-1" /> Aprovar
@@ -141,6 +172,11 @@ const ModerationPage = () => {
                   </button>
                 </div>
               ))}
+              {users.length === 0 && (
+                <div className="bg-white p-6 rounded-2xl text-center text-[var(--bj-text)] opacity-70 border border-[#ece3c7]">
+                  Nenhum usuário cadastrado ainda.
+                </div>
+              )}
             </div>
           )}
 
@@ -158,7 +194,7 @@ const ModerationPage = () => {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <TypeIcon size={16} className="text-[var(--bj-navy)]" />
-                        <span className="font-bold text-[var(--bj-text)]">{r.targetName}</span>
+                        <span className="font-bold text-[var(--bj-text)]">{r.target_name}</span>
                       </div>
                       <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
                         r.status === 'pendente' ? 'bg-[#FEF3C7] text-[#8A6D0A]' : 'bg-[#DCFCE7] text-[#166534]'
@@ -167,7 +203,7 @@ const ModerationPage = () => {
                       </span>
                     </div>
                     <div className="mt-2 text-sm text-[var(--bj-text)] opacity-90">{r.reason}</div>
-                    <div className="mt-1 text-xs text-[var(--bj-text)] opacity-60">Reportado por {r.reporterName} · {r.date}</div>
+                    <div className="mt-1 text-xs text-[var(--bj-text)] opacity-60">Reportado por {r.reporter_name} · {new Date(r.created_at).toLocaleDateString('pt-BR')}</div>
                     {r.status === 'pendente' && (
                       <div className="mt-3 flex gap-2">
                         <button onClick={() => resolveReport(r.id)} className="flex-1 btn-primary text-sm py-2.5">

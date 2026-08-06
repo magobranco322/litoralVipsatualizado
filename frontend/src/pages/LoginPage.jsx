@@ -28,29 +28,27 @@ const LoginPage = () => {
     }
   };
 
-  const submit = (e) => {
+  const submit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setTimeout(() => {
-      let res;
-      if (mode === 'login') {
-        res = login(email.trim(), password);
-      } else {
-        if (!name.trim()) {
-          setLoading(false);
-          toast({ title: 'Informe seu nome', variant: 'destructive' });
-          return;
-        }
-        res = register({ name: name.trim(), email: email.trim(), password, role, avatar });
-      }
-      setLoading(false);
-      if (!res.ok) {
-        toast({ title: 'Ops!', description: res.message, variant: 'destructive' });
+    let res;
+    if (mode === 'login') {
+      res = await login(email.trim(), password);
+    } else {
+      if (!name.trim()) {
+        setLoading(false);
+        toast({ title: 'Informe seu nome', variant: 'destructive' });
         return;
       }
-      toast({ title: mode === 'login' ? 'Bem-vindo de volta!' : 'Conta criada com sucesso!' });
-      navigate('/buscar', { replace: true });
-    }, 400);
+      res = await register({ name: name.trim(), email: email.trim(), password, role, avatar });
+    }
+    setLoading(false);
+    if (!res.ok) {
+      toast({ title: 'Ops!', description: res.message, variant: 'destructive' });
+      return;
+    }
+    toast({ title: mode === 'login' ? 'Bem-vindo de volta!' : 'Conta criada com sucesso!' });
+    navigate('/buscar', { replace: true });
   };
 
   return (

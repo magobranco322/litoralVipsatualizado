@@ -1,29 +1,18 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Header from '../components/Header';
 import BottomNav from '../components/BottomNav';
-import { MOCK_CHATS } from '../mock';
+import { useTrips } from '../context/TripsContext';
 import { useAuth } from '../context/AuthContext';
 import { Send, ArrowLeft, Search as SearchIcon } from 'lucide-react';
 
-const STORAGE = 'bj_chats';
-
-const loadChats = () => {
-  const stored = localStorage.getItem(STORAGE);
-  if (stored) { try { return JSON.parse(stored); } catch (e) { /* ignore */ } }
-  return MOCK_CHATS;
-};
-
 const ChatPage = () => {
   const { user } = useAuth();
-  const [chats, setChats] = useState(loadChats());
+  const { chats, sendMessage, markChatRead, refreshChats } = useTrips();
   const [activeId, setActiveId] = useState(null);
   const [text, setText] = useState('');
   const [query, setQuery] = useState('');
+  const [sending, setSending] = useState(false);
   const scrollRef = useRef(null);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE, JSON.stringify(chats));
-  }, [chats]);
 
   const active = useMemo(() => chats.find((c) => c.id === activeId), [chats, activeId]);
 
@@ -31,31 +20,38 @@ const ChatPage = () => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [active]);
 
+  useEffect(() => {
+    if (activeId) {
+      markChatRead(activeId);
+    }
+  }, [activeId, markChatRead]);
+
   const filteredChats = chats.filter((c) =>
-    c.otherUserName.toLowerCase().includes(query.toLowerCase())
+    (c.otherUserName || '').toLowerCase().includes(query.toLowerCase())
   );
 
-  const send = () => {
-    if (!text.trim() || !active) return;
-    const newMsg = {
-      id: 'm_' + Date.now(),
-      senderId: user.id,
-      text: text.trim(),
-      time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-    };
-    setChats((prev) =>
-      prev.map((c) =>
-        c.id === active.id
-          ? { ...c, messages: [...c.messages, newMsg], lastMessage: newMsg.text, lastTime: 'agora', unread: 0 }
-          : c
-      )
-    );
+  const send = async () => {
+    if (!text.trim() || !active || sending) return;
+    setSending(true);
+    const msg = text.trim();
     setText('');
+    await sendMessage(active.id, msg);
+    setSending(false);
   };
 
   const openChat = (id) => {
     setActiveId(id);
-    setChats((prev) => prev.map((c) => (c.id === id ? { ...c, unread: 0 } : c)));
+  };
+
+  const formatLastTime = (iso) => {
+    if (!iso) return '';
+    const d = new Date(iso);
+    const now = new Date();
+    const diff = (now - d) / 1000;
+    if (diff < 60) return 'agora';
+    if (diff < 3600) return `${Math.floor(diff / 60)}min`;
+    if (diff < 86400) return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    return d.toLocaleDateString('pt-BR');
   };
 
   if (active) {
@@ -63,7 +59,7 @@ const ChatPage = () => {
       <div className="mobile-shell">
         <div className="striped-bar" />
         <div className="px-4 py-3 flex items-center gap-3 border-b border-[#ece3c7] bg-white">
-          <button onClick={() => setActiveId(null)} className="p-1">
+          <button onClick={() => { setActiveId(null); refreshChats(); }} className="p-1">
             <ArrowLeft size={22} className="text-[var(--bj-text)]" />
           </button>
           <img src={active.otherUserAvatar} className="w-10 h-10 rounded-full object-cover" alt="" />
@@ -101,8 +97,9 @@ const ChatPage = () => {
               onKeyDown={(e) => e.key === 'Enter' && send()}
               placeholder="Escreva uma mensagem..."
               className="flex-1 bg-transparent px-3 py-2 outline-none text-[15px] text-[var(--bj-text)]"
+              disabled={sending}
             />
-            <button onClick={send} className="w-10 h-10 rounded-full bg-[var(--bj-navy)] flex items-center justify-center hover:bg-[var(--bj-navy-dark)] transition-colors">
+            <button onClick={send} disabled={sending || !text.trim()} className="w-10 h-10 rounded-full bg-[var(--bj-navy)] flex items-center justify-center hover:bg-[var(--bj-navy-dark)] transition-colors disabled:opacity-50">
               <Send size={18} className="text-white" />
             </button>
           </div>
@@ -140,7 +137,7 @@ const ChatPage = () => {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between gap-2">
                   <span className="font-bold text-[var(--bj-text)] truncate">{c.otherUserName}</span>
-                  <span className="text-xs text-[var(--bj-text)] opacity-60 flex-shrink-0">{c.lastTime}</span>
+                  <span className="text-xs text-[var(--bj-text)] opacity-60 flex-shrink-0">{formatLastTime(c.lastTime)}</span>
                 </div>
                 <div className="flex items-center justify-between gap-2 mt-0.5">
                   <span className="text-sm text-[var(--bj-text)] opacity-75 truncate">{c.lastMessage}</span>
@@ -154,7 +151,9 @@ const ChatPage = () => {
             </button>
           ))}
           {filteredChats.length === 0 && (
-            <div className="text-center py-10 text-[var(--bj-text)] opacity-70">Nenhuma conversa.</div>
+            <div className="text-center py-10 text-[var(--bj-text)] opacity-70">
+              Nenhuma conversa. Reserve uma vaga para iniciar uma conversa com o motorista.
+            </div>
           )}
         </div>
       </div>

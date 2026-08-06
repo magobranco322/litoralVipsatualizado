@@ -1,88 +1,98 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { MOCK_USERS } from '../mock';
+import api, { setToken, getToken, apiError } from '../lib/api';
 
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [users, setUsers] = useState(MOCK_USERS);
+  const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const fetchMe = async () => {
+    try {
+      const { data } = await api.get('/auth/me');
+      setUser(data);
+    } catch (e) {
+      setUser(null);
+      setToken('');
+    }
+  };
+
+  const refreshUsers = async () => {
+    try {
+      const { data } = await api.get('/users');
+      setUsers(data);
+    } catch (e) {
+      // silent
+    }
+  };
+
   useEffect(() => {
-    const stored = localStorage.getItem('bj_user');
-    const storedUsers = localStorage.getItem('bj_users');
-    if (storedUsers) {
-      try { setUsers(JSON.parse(storedUsers)); } catch (e) { /* ignore */ }
-    }
-    if (stored) {
-      try { setUser(JSON.parse(stored)); } catch (e) { /* ignore */ }
-    }
-    setLoading(false);
+    (async () => {
+      if (getToken()) {
+        await fetchMe();
+        await refreshUsers();
+      }
+      setLoading(false);
+    })();
   }, []);
 
-  const persistUsers = (list) => {
-    setUsers(list);
-    localStorage.setItem('bj_users', JSON.stringify(list));
-  };
-
-  const login = (email, password) => {
-    const found = users.find(
-      (u) => u.email.toLowerCase() === email.toLowerCase() && u.password === password
-    );
-    if (!found) return { ok: false, message: 'E-mail ou senha inválidos' };
-    if (found.status === 'bloqueado') return { ok: false, message: 'Conta bloqueada. Contate o suporte.' };
-    setUser(found);
-    localStorage.setItem('bj_user', JSON.stringify(found));
-    return { ok: true };
-  };
-
-  const register = (data) => {
-    if (users.some((u) => u.email.toLowerCase() === data.email.toLowerCase())) {
-      return { ok: false, message: 'E-mail já cadastrado' };
+  const login = async (email, password) => {
+    try {
+      const { data } = await api.post('/auth/login', { email, password });
+      setToken(data.token);
+      setUser(data.user);
+      await refreshUsers();
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, message: apiError(e) };
     }
-    const newUser = {
-      id: 'u_' + Date.now(),
-      name: data.name,
-      email: data.email,
-      password: data.password,
-      role: data.role,
-      rating: 0.0,
-      trips: 0,
-      avatar: data.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(data.name)}`,
-      status: 'ativo',
-      verified: false,
-      createdAt: new Date().toISOString().slice(0, 10),
-    };
-    const updated = [...users, newUser];
-    persistUsers(updated);
-    setUser(newUser);
-    localStorage.setItem('bj_user', JSON.stringify(newUser));
-    return { ok: true };
+  };
+
+  const register = async (payload) => {
+    try {
+      const { data } = await api.post('/auth/register', payload);
+      setToken(data.token);
+      setUser(data.user);
+      await refreshUsers();
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, message: apiError(e) };
+    }
   };
 
   const logout = () => {
+    setToken('');
     setUser(null);
-    localStorage.removeItem('bj_user');
   };
 
-  const updateUserStatus = (userId, status) => {
-    const updated = users.map((u) => (u.id === userId ? { ...u, status } : u));
-    persistUsers(updated);
+  const updateUserStatus = async (userId, status) => {
+    try {
+      await api.post(`/admin/users/${userId}/status`, { status });
+      await refreshUsers();
+    } catch (e) {
+      console.error('Erro ao atualizar status:', apiError(e));
+    }
   };
 
-  const updateUserFields = (userId, fields) => {
-    const updated = users.map((u) => (u.id === userId ? { ...u, ...fields } : u));
-    persistUsers(updated);
-    if (user && user.id === userId) {
-      const merged = { ...user, ...fields };
-      setUser(merged);
-      localStorage.setItem('bj_user', JSON.stringify(merged));
+  const updateUserFields = async (userId, fields) => {
+    // Only self update via PATCH /users/me
+    if (!user || userId !== user.id) {
+      await refreshUsers();
+      return;
+    }
+    try {
+      const { data } = await api.patch('/users/me', fields);
+      setUser(data);
+      await refreshUsers();
+    } catch (e) {
+      console.error('Erro ao atualizar perfil:', apiError(e));
     }
   };
 
   return (
     <AuthContext.Provider
-      value={{ user, users, loading, login, register, logout, updateUserStatus, updateUserFields }}
+      value={{ user, users, loading, login, register, logout, updateUserStatus, updateUserFields, refreshUsers }}
     >
       {children}
     </AuthContext.Provider>

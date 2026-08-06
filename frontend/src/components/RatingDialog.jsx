@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { X, Star } from 'lucide-react';
 import { useTrips } from '../context/TripsContext';
-import { useAuth } from '../context/AuthContext';
 import { useToast } from '../hooks/use-toast';
 
 const RatingDialog = ({ reservation, trip, onClose }) => {
@@ -9,13 +8,16 @@ const RatingDialog = ({ reservation, trip, onClose }) => {
   const [hover, setHover] = useState(0);
   const [comment, setComment] = useState('');
   const { rateReservation } = useTrips();
-  const { updateUserFields } = useAuth();
   const { toast } = useToast();
 
   if (!reservation || !trip) return null;
 
-  const submit = () => {
-    rateReservation(reservation.id, score, comment.trim(), updateUserFields);
+  const submit = async () => {
+    const res = await rateReservation(reservation.id, score, comment.trim());
+    if (res && !res.ok) {
+      toast({ title: 'Não foi possível avaliar', description: res.message, variant: 'destructive' });
+      return;
+    }
     toast({ title: 'Avaliação enviada!', description: `Você deu ${score} estrela(s) a ${trip.driverName}.` });
     onClose();
   };

@@ -36,7 +36,7 @@ const Header = () => {
 
   if (!user) return null;
 
-  const notifs = getNotificationsFor(user.id);
+  const notifs = getNotificationsFor();
   const unread = notifs.filter((n) => !n.read).length;
 
   const handleLogout = () => {
@@ -46,7 +46,7 @@ const Header = () => {
 
   const openPanel = () => {
     setOpen(true);
-    if (unread > 0) setTimeout(() => markAllNotificationsRead(user.id), 400);
+    if (unread > 0) setTimeout(() => markAllNotificationsRead(), 400);
   };
 
   return (
@@ -86,7 +86,7 @@ const Header = () => {
               <div className="flex items-center gap-1">
                 {notifs.length > 0 && (
                   <button
-                    onClick={() => clearNotifications(user.id)}
+                    onClick={() => clearNotifications()}
                     className="w-9 h-9 rounded-full hover:bg-[var(--bj-cream-2)] flex items-center justify-center"
                     title="Limpar tudo"
                   >
