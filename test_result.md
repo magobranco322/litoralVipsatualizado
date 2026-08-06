@@ -321,6 +321,18 @@ backend:
         agent: "testing"
         comment: "✅ Automatic trip expiration cleanup fully tested with 12 test cases, all passing (100% success rate). Verified: (1) Expired trip (01/01/2020) automatically deleted when GET /api/trips called; (2) Future trip (01/01/2099) remains after cleanup; (3) Reservation for expired trip marked as 'concluida' (not deleted) for rating purposes; (4) Cleanup triggered on both GET /api/trips and GET /api/admin/trips; (5) Recent trip within 3-hour grace period NOT deleted; (6) Timezone handling correct (Brazil UTC-3). Evidence: Expired trip ID 76a1c59c169643baadd904cac6549da2 deleted, Future trip ID f8e29981c1654a3ea1223f456367b378 exists, Reservation ID d55c4e26b1c74f34b9d377e119888470 status='concluida', Recent trip ID 4eb311835cf7438f87c89f49b4499d4d survived cleanup."
 
+  - task: "Admin - Delete user endpoint (DELETE /admin/users/{user_id})"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✅ DELETE /admin/users/{user_id} endpoint fully tested with 13 test cases, all passing (100% success rate). Verified: (1) Passenger deletion (200 OK, trips_removed=0); (2) Deleted passenger removed from user list; (3) Deleted passenger cannot login (401); (4) GET /admin/reports doesn't crash after deletion; (5) GET /admin/pending doesn't crash; (6) Driver deletion (200 OK, trips_removed=1); (7) Driver's trips cascade deleted (trip removed from list); (8) Driver removed from user list; (9) Admin cannot delete own account (400 with 'Não é possível remover administradores'); (10) Admin cannot delete another admin (400); (11) Non-admin gets 403 when attempting deletion; (12) Nonexistent user returns 404. Full cascade deletion working: user's trips deleted, reservations cancelled, chats deleted, notifications deleted. All guardrails functioning correctly."
+
 frontend:
   - task: "Frontend UI components"
     implemented: true
@@ -337,12 +349,12 @@ frontend:
 metadata:
   created_by: "testing_agent"
   version: "1.0"
-  test_sequence: 4
+  test_sequence: 5
   run_ui: false
 
 test_plan:
   current_focus:
-    - "Automatic trip expiration cleanup tested and verified"
+    - "Admin delete user endpoint tested and verified"
   stuck_tasks: []
   test_all: true
   test_priority: "high_first"
@@ -356,3 +368,5 @@ agent_communication:
     message: "Admin cancel-trip endpoint (POST /admin/trips/{trip_id}/cancel) tested successfully. All 11 test cases passed (100% success rate). Key findings: (1) Trip is marked as 'cancelada' but NOT deleted from database; (2) Both driver and passenger receive cancelamento notifications with 'moderação' text; (3) Reservation status updated to 'cancelada'; (4) Idempotency works correctly - second cancel returns already_cancelled:true; (5) Permission checks working (403 for non-admin, 404 for nonexistent trip). Endpoint is production-ready."
   - agent: "testing"
     message: "Automatic trip expiration cleanup tested successfully. All 12 test cases passed (100% success rate). Verified: (1) Trips older than 3 hours past scheduled departure (Brazil UTC-3) are automatically deleted when GET /api/trips or GET /api/admin/trips is called; (2) Expired trip (01/01/2020) deleted correctly; (3) Future trip (01/01/2099) remains after cleanup; (4) Reservations for expired trips marked as 'concluida' (not deleted) so users can still rate; (5) Recent trips within 3-hour grace period NOT deleted; (6) Timezone handling correct. Feature is production-ready."
+  - agent: "testing"
+    message: "Admin delete-user endpoint (DELETE /admin/users/{user_id}) tested successfully. All 13 test cases passed (100% success rate). Verified complete user deletion flow: (1) Passenger deletion removes user, prevents login, doesn't crash admin endpoints; (2) Driver deletion cascades to remove all their trips and notify passengers; (3) All guardrails working: cannot delete own account (400), cannot delete admin users (400), non-admin gets 403, nonexistent user returns 404. Full cascade deletion confirmed: user's trips deleted, reservations cancelled, chats deleted, notifications deleted. Endpoint is production-ready."

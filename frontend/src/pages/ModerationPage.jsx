@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import Header from '../components/Header';
 import BottomNav from '../components/BottomNav';
 import { useAuth } from '../context/AuthContext';
-import { Shield, CheckCircle2, XCircle, AlertTriangle, UserCheck, MessageSquare, Car, Users, Ban, ShieldCheck, Trash2, MapPin, Clock } from 'lucide-react';
+import { Shield, CheckCircle2, XCircle, AlertTriangle, UserCheck, MessageSquare, Car, Users, Ban, ShieldCheck, Trash2, MapPin, Clock, UserX } from 'lucide-react';
 import { useToast } from '../hooks/use-toast';
 import api, { apiError } from '../lib/api';
 
@@ -84,6 +84,20 @@ const ModerationPage = () => {
     load();
   };
 
+  const removeUser = async (u) => {
+    if (!window.confirm(`REMOVER permanentemente o usuário "${u.name}" (${u.email})?\n\nTodas as viagens publicadas por ele serão canceladas e passageiros serão avisados. Esta ação não pode ser desfeita.`)) return;
+    try {
+      const { data } = await api.delete(`/admin/users/${u.id}`);
+      toast({
+        title: 'Usuário removido',
+        description: data.trips_removed ? `${data.trips_removed} viagem(ns) também removida(s).` : 'Conta apagada com sucesso.',
+      });
+      load();
+    } catch (e) {
+      toast({ title: 'Erro', description: apiError(e), variant: 'destructive' });
+    }
+  };
+
   const removeTrip = async (trip) => {
     if (!window.confirm(`REMOVER permanentemente a viagem ${trip.origin} → ${trip.destination}? Esta ação não pode ser desfeita.`)) return;
     try {
@@ -146,7 +160,8 @@ const ModerationPage = () => {
         <div className="mt-5 flex gap-2 overflow-x-auto no-scrollbar">
           <TabBtn active={tab === 'aprovacoes'} onClick={() => setTab('aprovacoes')} icon={UserCheck}>Aprovações</TabBtn>
           <TabBtn active={tab === 'viagens'} onClick={() => setTab('viagens')} icon={Car}>Viagens</TabBtn>
-          <TabBtn active={tab === 'usuarios'} onClick={() => setTab('usuarios')} icon={Users}>Usuários</TabBtn>
+          <TabBtn active={tab === 'motoristas'} onClick={() => setTab('motoristas')} icon={Car}>Motoristas</TabBtn>
+          <TabBtn active={tab === 'passageiros'} onClick={() => setTab('passageiros')} icon={Users}>Passageiros</TabBtn>
           <TabBtn active={tab === 'denuncias'} onClick={() => setTab('denuncias')} icon={AlertTriangle}>Denúncias</TabBtn>
         </div>
 
@@ -230,34 +245,52 @@ const ModerationPage = () => {
             </div>
           )}
 
-          {tab === 'usuarios' && (
+          {(tab === 'motoristas' || tab === 'passageiros') && (
             <div className="space-y-2">
-              {users.filter((u) => u.role !== 'admin').map((u) => (
-                <div key={u.id} className="bg-white rounded-2xl p-3 border border-[#ece3c7] flex items-center gap-3">
-                  <img src={u.avatar} className="w-11 h-11 rounded-full object-cover" alt="" />
-                  <div className="flex-1 min-w-0">
-                    <div className="font-bold text-[var(--bj-text)] truncate">{u.name}</div>
-                    <div className="text-xs text-[var(--bj-text)] opacity-70 truncate">{u.email} · {u.role}</div>
+              {(() => {
+                const roleFilter = tab === 'motoristas' ? 'motorista' : 'passageiro';
+                const list = users.filter((u) => u.role === roleFilter);
+                if (list.length === 0) {
+                  return (
+                    <div className="bg-white p-6 rounded-2xl text-center text-[var(--bj-text)] opacity-70 border border-[#ece3c7]">
+                      Nenhum {roleFilter} cadastrado.
+                    </div>
+                  );
+                }
+                return list.map((u) => (
+                  <div key={u.id} className="bg-white rounded-2xl p-3 border border-[#ece3c7]">
+                    <div className="flex items-center gap-3">
+                      <img src={u.avatar} className="w-11 h-11 rounded-full object-cover flex-shrink-0" alt="" />
+                      <div className="flex-1 min-w-0">
+                        <div className="font-bold text-[var(--bj-text)] truncate">{u.name}</div>
+                        <div className="text-xs text-[var(--bj-text)] opacity-70 truncate">{u.email}</div>
+                        {u.phone && (
+                          <div className="text-xs text-[var(--bj-text)] opacity-60 truncate">{u.phone}{u.city ? ` · ${u.city}` : ''}</div>
+                        )}
+                      </div>
+                      <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${
+                        u.status === 'ativo' ? 'bg-[#DCFCE7] text-[#166534]' : 'bg-[#FEE2E2] text-[#991B1B]'
+                      }`}>
+                        {u.status}
+                      </span>
+                    </div>
+                    <div className="mt-3 grid grid-cols-2 gap-2">
+                      <button
+                        onClick={() => toggleUser(u)}
+                        className="chip justify-center py-2 text-sm"
+                      >
+                        {u.status === 'ativo' ? <><Ban size={14} /> Bloquear</> : <><ShieldCheck size={14} /> Reativar</>}
+                      </button>
+                      <button
+                        onClick={() => removeUser(u)}
+                        className="btn-outline-danger justify-center py-2 text-sm"
+                      >
+                        <UserX size={14} /> Remover
+                      </button>
+                    </div>
                   </div>
-                  <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
-                    u.status === 'ativo' ? 'bg-[#DCFCE7] text-[#166534]' : 'bg-[#FEE2E2] text-[#991B1B]'
-                  }`}>
-                    {u.status}
-                  </span>
-                  <button
-                    onClick={() => toggleUser(u)}
-                    className={`p-2 rounded-full ${u.status === 'ativo' ? 'text-[var(--bj-red)] hover:bg-red-50' : 'text-[#166534] hover:bg-green-50'}`}
-                    title={u.status === 'ativo' ? 'Bloquear' : 'Reativar'}
-                  >
-                    {u.status === 'ativo' ? <Ban size={18} /> : <ShieldCheck size={18} />}
-                  </button>
-                </div>
-              ))}
-              {users.length === 0 && (
-                <div className="bg-white p-6 rounded-2xl text-center text-[var(--bj-text)] opacity-70 border border-[#ece3c7]">
-                  Nenhum usuário cadastrado ainda.
-                </div>
-              )}
+                ));
+              })()}
             </div>
           )}
 

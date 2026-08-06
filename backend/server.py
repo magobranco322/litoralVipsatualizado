@@ -776,6 +776,38 @@ async def admin_user_status(user_id: str, payload: StatusPatch, user: dict = Dep
     return {'ok': True}
 
 
+@api.delete('/admin/users/{user_id}')
+async def admin_delete_user(user_id: str, user: dict = Depends(require_admin)):
+    target = await db.users.find_one({'id': user_id}, {'_id': 0})
+    if not target:
+        raise HTTPException(status_code=404, detail='Usuário não encontrado')
+    if target.get('role') == 'admin':
+        raise HTTPException(status_code=400, detail='Não é possível remover administradores')
+    if target['id'] == user['id']:
+        raise HTTPException(status_code=400, detail='Você não pode remover a própria conta')
+
+    # Cancel and delete all trips published by this user (if driver)
+    trips_removed = 0
+    async for t in db.trips.find({'driver_id': user_id}, {'_id': 0, 'id': 1, 'origin': 1, 'destination': 1}):
+        msg = f'Viagem {t["origin"]} → {t["destination"]} foi removida pela moderação.'
+        async for r in db.reservations.find({'trip_id': t['id'], 'status': 'confirmada'}):
+            await add_notification(r['passenger_id'], 'cancelamento', msg, t['id'])
+        await db.reservations.update_many({'trip_id': t['id']}, {'$set': {'status': 'cancelada'}})
+        await db.trips.delete_one({'id': t['id']})
+        trips_removed += 1
+
+    # Delete user's own reservations (as passenger)
+    await db.reservations.delete_many({'passenger_id': user_id})
+    # Delete user's chats and messages
+    await db.chats.delete_many({'participants': user_id})
+    # Delete user's notifications and reports made
+    await db.notifications.delete_many({'user_id': user_id})
+    await db.reports.delete_many({'reporter_id': user_id})
+    # Finally delete the user
+    await db.users.delete_one({'id': user_id})
+    return {'ok': True, 'trips_removed': trips_removed}
+
+
 @api.get('/admin/reports')
 async def admin_reports(user: dict = Depends(require_admin)):
     docs = await db.reports.find({}, {'_id': 0}).sort('created_at', -1).to_list(500)
