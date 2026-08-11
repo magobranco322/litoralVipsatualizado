@@ -7,7 +7,8 @@ import EditTripDialog from '../components/EditTripDialog';
 import { useAuth } from '../context/AuthContext';
 import { useTrips } from '../context/TripsContext';
 import { useToast } from '../hooks/use-toast';
-import { Car, MapPin, Clock, Users, TrendingUp, Wallet, CheckCircle2, Plus, Star, XCircle, Flag, PencilLine } from 'lucide-react';
+import { openWhatsApp, hasValidPhone, buildReservationMessage } from '../lib/whatsapp';
+import { Car, MapPin, Clock, Users, TrendingUp, Wallet, CheckCircle2, Plus, Star, XCircle, Flag, PencilLine, MessageCircle } from 'lucide-react';
 
 const Stat = ({ icon: Icon, label, value, tint }) => (
   <div className="bg-white rounded-2xl p-4 border border-[#ece3c7] flex items-center gap-3">
@@ -22,12 +23,29 @@ const Stat = ({ icon: Icon, label, value, tint }) => (
 );
 
 const PanelPage = () => {
-  const { user } = useAuth();
+  const { user, users } = useAuth();
   const { trips, reservations, cancelReservation, completeReservation } = useTrips();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [rating, setRating] = useState(null); // { reservation, trip }
   const [editingTrip, setEditingTrip] = useState(null);
+
+  const notifyDriverWhatsApp = (trip) => {
+    const driver = (users || []).find((u) => u.id === trip.driverId);
+    if (!driver || !hasValidPhone(driver.phone)) {
+      toast({ title: 'Motorista sem WhatsApp', description: 'Este motorista não cadastrou um número válido.', variant: 'destructive' });
+      return;
+    }
+    const message = buildReservationMessage({
+      passengerName: user.name,
+      driverName: trip.driverName,
+      origin: trip.origin,
+      destination: trip.destination,
+      date: trip.date,
+      time: trip.time,
+    });
+    openWhatsApp(driver.phone, message);
+  };
 
   const localRequests = JSON.parse(localStorage.getItem('bj_requests') || '[]');
 
@@ -184,6 +202,14 @@ const PanelPage = () => {
                       {r.status === 'confirmada' && (
                         <>
                           <button
+                            onClick={() => notifyDriverWhatsApp(t)}
+                            className="flex-1 text-sm py-2.5 rounded-full font-bold flex items-center justify-center gap-1.5 transition-colors"
+                            style={{ background: '#25D366', color: '#fff' }}
+                            title="Avisar motorista via WhatsApp"
+                          >
+                            <MessageCircle size={16} /> WhatsApp
+                          </button>
+                          <button
                             onClick={() => { completeReservation(r.id); toast({ title: 'Viagem concluída! Deixe sua avaliação.' }); }}
                             className="flex-1 btn-primary text-sm py-2.5"
                           >
@@ -193,7 +219,7 @@ const PanelPage = () => {
                             onClick={() => { cancelReservation(r.id); toast({ title: 'Reserva cancelada' }); }}
                             className="flex-1 btn-outline-danger justify-center text-sm py-2.5"
                           >
-                            <XCircle size={16} /> Cancelar
+                            <XCircle size={16} />
                           </button>
                         </>
                       )}

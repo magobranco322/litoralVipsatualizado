@@ -24,8 +24,8 @@ JWT_TTL_HOURS = 24 * 30
 
 # Timezone helpers: date/time in trips are stored as Brazil local time (BRT = UTC-3).
 BRAZIL_TZ_OFFSET_HOURS = 3
-# Keep expired trips visible this many hours after their scheduled departure before deleting.
-TRIP_EXPIRE_GRACE_HOURS = 3
+# Delete trips as soon as their scheduled departure has passed (no grace period).
+TRIP_EXPIRE_GRACE_HOURS = 0
 
 _cleanup_running = False
 
@@ -49,8 +49,8 @@ def _departure_utc(date_str: str, time_str: str):
 
 
 async def cleanup_expired_trips():
-    """Delete trips whose departure time (plus grace period) has passed.
-    Concurrent-safe via a simple module-level flag.
+    """Delete trips whose departure time has passed (Brazil local time).
+    Concurrent-safe via a simple module-level flag. Uses batch operations.
     """
     global _cleanup_running
     if _cleanup_running:
@@ -60,21 +60,20 @@ async def cleanup_expired_trips():
     try:
         now_utc = datetime.utcnow()
         threshold = now_utc - timedelta(hours=TRIP_EXPIRE_GRACE_HOURS)
-        cursor = db.trips.find({}, {'_id': 0, 'id': 1, 'date': 1, 'time': 1})
+        cursor = db.trips.find({}, {'_id': 0, 'id': 1, 'date': 1, 'time': 1}).limit(2000)
         expired_ids = []
         async for t in cursor:
             dep = _departure_utc(t.get('date', ''), t.get('time', ''))
             if dep is not None and dep < threshold:
                 expired_ids.append(t['id'])
-        for tid in expired_ids:
-            # Mark any confirmed reservation as concluida so history remains meaningful
+        if expired_ids:
+            # Batch: mark confirmed reservations as concluida and delete all expired trips in 2 operations
             await db.reservations.update_many(
-                {'trip_id': tid, 'status': 'confirmada'},
+                {'trip_id': {'$in': expired_ids}, 'status': 'confirmada'},
                 {'$set': {'status': 'concluida'}},
             )
-            await db.trips.delete_one({'id': tid})
-            removed += 1
-        if removed:
+            result = await db.trips.delete_many({'id': {'$in': expired_ids}})
+            removed = result.deleted_count if result else len(expired_ids)
             logger.info(f'Expired trips cleanup: removed {removed}')
     finally:
         _cleanup_running = False
@@ -527,12 +526,17 @@ async def cancel_trip(trip_id: str, payload: CancelTripIn, user: dict = Depends(
     await db.trips.update_one({'id': trip_id}, {'$set': {'status': 'cancelada', 'seats_filled': 0}})
     reason = (payload.reason or '').strip()
     msg = f'Viagem {trip["origin"]} → {trip["destination"]} foi cancelada pelo motorista' + (f'. Motivo: {reason}' if reason else '.')
-    notified = 0
-    async for r in db.reservations.find({'trip_id': trip_id, 'status': 'confirmada'}):
-        await add_notification(r['passenger_id'], 'cancelamento', msg, trip_id)
-        notified += 1
+    # Batch notifications
+    passenger_ids = [r['passenger_id'] async for r in db.reservations.find({'trip_id': trip_id, 'status': 'confirmada'}, {'_id': 0, 'passenger_id': 1})]
+    now = datetime.utcnow()
+    notifs = [
+        {'id': gen_id(), 'user_id': pid, 'type': 'cancelamento', 'message': msg, 'trip_id': trip_id, 'read': False, 'created_at': now}
+        for pid in passenger_ids
+    ]
+    if notifs:
+        await db.notifications.insert_many(notifs)
     await db.reservations.update_many({'trip_id': trip_id, 'status': 'confirmada'}, {'$set': {'status': 'cancelada'}})
-    return {'notified': notified}
+    return {'notified': len(passenger_ids)}
 
 
 # ---------- Reservations ----------
@@ -788,13 +792,23 @@ async def admin_delete_user(user_id: str, user: dict = Depends(require_admin)):
 
     # Cancel and delete all trips published by this user (if driver)
     trips_removed = 0
+    trip_ids_to_remove = []
+    all_notifs = []
+    now = datetime.utcnow()
     async for t in db.trips.find({'driver_id': user_id}, {'_id': 0, 'id': 1, 'origin': 1, 'destination': 1}):
+        trip_ids_to_remove.append(t['id'])
         msg = f'Viagem {t["origin"]} → {t["destination"]} foi removida pela moderação.'
-        async for r in db.reservations.find({'trip_id': t['id'], 'status': 'confirmada'}):
-            await add_notification(r['passenger_id'], 'cancelamento', msg, t['id'])
-        await db.reservations.update_many({'trip_id': t['id']}, {'$set': {'status': 'cancelada'}})
-        await db.trips.delete_one({'id': t['id']})
-        trips_removed += 1
+        async for r in db.reservations.find({'trip_id': t['id'], 'status': 'confirmada'}, {'_id': 0, 'passenger_id': 1}):
+            all_notifs.append({
+                'id': gen_id(), 'user_id': r['passenger_id'], 'type': 'cancelamento',
+                'message': msg, 'trip_id': t['id'], 'read': False, 'created_at': now,
+            })
+    if all_notifs:
+        await db.notifications.insert_many(all_notifs)
+    if trip_ids_to_remove:
+        await db.reservations.update_many({'trip_id': {'$in': trip_ids_to_remove}}, {'$set': {'status': 'cancelada'}})
+        result = await db.trips.delete_many({'id': {'$in': trip_ids_to_remove}})
+        trips_removed = result.deleted_count if result else len(trip_ids_to_remove)
 
     # Delete user's own reservations (as passenger)
     await db.reservations.delete_many({'passenger_id': user_id})
@@ -838,14 +852,18 @@ async def admin_delete_trip(trip_id: str, user: dict = Depends(require_admin)):
     trip = await db.trips.find_one({'id': trip_id}, {'_id': 0})
     if not trip:
         raise HTTPException(status_code=404, detail='Viagem não encontrada')
-    notified = 0
     msg = f'Viagem {trip["origin"]} → {trip["destination"]} foi removida pela moderação.'
-    async for r in db.reservations.find({'trip_id': trip_id, 'status': 'confirmada'}):
-        await add_notification(r['passenger_id'], 'cancelamento', msg, trip_id)
-        notified += 1
+    passenger_ids = [r['passenger_id'] async for r in db.reservations.find({'trip_id': trip_id, 'status': 'confirmada'}, {'_id': 0, 'passenger_id': 1})]
+    now = datetime.utcnow()
+    notifs = [
+        {'id': gen_id(), 'user_id': pid, 'type': 'cancelamento', 'message': msg, 'trip_id': trip_id, 'read': False, 'created_at': now}
+        for pid in passenger_ids
+    ]
+    if notifs:
+        await db.notifications.insert_many(notifs)
     await db.reservations.update_many({'trip_id': trip_id, 'status': 'confirmada'}, {'$set': {'status': 'cancelada'}})
     await db.trips.delete_one({'id': trip_id})
-    return {'ok': True, 'notified': notified}
+    return {'ok': True, 'notified': len(passenger_ids)}
 
 
 @api.post('/admin/trips/{trip_id}/cancel')
@@ -858,13 +876,19 @@ async def admin_cancel_trip(trip_id: str, payload: CancelTripIn, user: dict = De
     await db.trips.update_one({'id': trip_id}, {'$set': {'status': 'cancelada', 'seats_filled': 0}})
     reason = (payload.reason or '').strip()
     msg = f'Viagem {trip["origin"]} → {trip["destination"]} foi cancelada pela moderação' + (f'. Motivo: {reason}' if reason else '.')
-    notified = 0
-    async for r in db.reservations.find({'trip_id': trip_id, 'status': 'confirmada'}):
-        await add_notification(r['passenger_id'], 'cancelamento', msg, trip_id)
-        notified += 1
-    await add_notification(trip['driver_id'], 'cancelamento', f'Sua viagem {trip["origin"]} → {trip["destination"]} foi cancelada pela moderação' + (f'. Motivo: {reason}' if reason else '.'), trip_id)
+    passenger_ids = [r['passenger_id'] async for r in db.reservations.find({'trip_id': trip_id, 'status': 'confirmada'}, {'_id': 0, 'passenger_id': 1})]
+    now = datetime.utcnow()
+    notifs = [
+        {'id': gen_id(), 'user_id': pid, 'type': 'cancelamento', 'message': msg, 'trip_id': trip_id, 'read': False, 'created_at': now}
+        for pid in passenger_ids
+    ]
+    # Also notify the driver
+    notifs.append({'id': gen_id(), 'user_id': trip['driver_id'], 'type': 'cancelamento',
+                   'message': f'Sua viagem {trip["origin"]} → {trip["destination"]} foi cancelada pela moderação' + (f'. Motivo: {reason}' if reason else '.'),
+                   'trip_id': trip_id, 'read': False, 'created_at': now})
+    await db.notifications.insert_many(notifs)
     await db.reservations.update_many({'trip_id': trip_id, 'status': 'confirmada'}, {'$set': {'status': 'cancelada'}})
-    return {'ok': True, 'notified': notified}
+    return {'ok': True, 'notified': len(passenger_ids)}
 
 
 @api.get('/admin/pending')

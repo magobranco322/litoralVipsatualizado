@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTrips } from '../context/TripsContext';
 import { useToast } from '../hooks/use-toast';
 import ReportDialog from './ReportDialog';
+import { openWhatsApp, hasValidPhone, buildReservationMessage } from '../lib/whatsapp';
 
 const TripDetailDialog = ({ trip, onClose }) => {
   const { user, users } = useAuth();
@@ -29,7 +30,26 @@ const TripDetailDialog = ({ trip, onClose }) => {
       toast({ title: 'Não foi possível reservar', description: res.message, variant: 'destructive' });
       return;
     }
-    toast({ title: 'Vaga reservada!', description: 'Iniciando conversa com o motorista.' });
+    toast({ title: 'Vaga reservada!', description: 'Avisando o motorista via WhatsApp...' });
+
+    // Auto-open WhatsApp with pre-filled message to the driver
+    const driver = (users || []).find((u) => u.id === trip.driverId);
+    const message = buildReservationMessage({
+      passengerName: user.name,
+      driverName: trip.driverName,
+      origin: trip.origin,
+      destination: trip.destination,
+      date: trip.date,
+      time: trip.time,
+    });
+    if (driver && hasValidPhone(driver.phone)) {
+      openWhatsApp(driver.phone, message);
+    } else {
+      toast({
+        title: 'Motorista sem WhatsApp cadastrado',
+        description: 'Envie mensagem pelo chat do app.',
+      });
+    }
     onClose();
     navigate('/chat');
   };
