@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Trash2, AlertTriangle } from 'lucide-react';
+import { X, Trash2, AlertTriangle, Minus, Plus } from 'lucide-react';
 import { useTrips } from '../context/TripsContext';
 import { useToast } from '../hooks/use-toast';
 
@@ -10,22 +10,45 @@ const EditTripDialog = ({ trip, onClose }) => {
     date: trip.date,
     time: trip.time,
     price: trip.price,
+    seatsTotal: trip.seatsTotal,
   });
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [reason, setReason] = useState('');
+  const [saving, setSaving] = useState(false);
 
   const set = (k, v) => setForm({ ...form, [k]: v });
 
-  const save = () => {
+  const decSeats = () => {
+    const next = Math.max(1, Number(form.seatsTotal) - 1);
+    if (next < (trip.seatsFilled || 0)) {
+      toast({ title: `Já existem ${trip.seatsFilled} reservas`, description: 'Não é possível reduzir abaixo desse número.', variant: 'destructive' });
+      return;
+    }
+    set('seatsTotal', next);
+  };
+  const incSeats = () => set('seatsTotal', Math.min(8, Number(form.seatsTotal) + 1));
+
+  const save = async () => {
     if (Number(form.price) < 10) {
       toast({ title: 'Valor mínimo R$ 10,00', variant: 'destructive' });
       return;
     }
-    const res = updateTrip(trip.id, {
+    if (Number(form.seatsTotal) < 1 || Number(form.seatsTotal) > 8) {
+      toast({ title: 'Vagas devem estar entre 1 e 8', variant: 'destructive' });
+      return;
+    }
+    setSaving(true);
+    const res = await updateTrip(trip.id, {
       date: form.date,
       time: form.time,
       price: Number(form.price),
+      seatsTotal: Number(form.seatsTotal),
     });
+    setSaving(false);
+    if (!res.ok) {
+      toast({ title: 'Erro ao atualizar', description: res.message, variant: 'destructive' });
+      return;
+    }
     toast({
       title: 'Viagem atualizada!',
       description: res.notified > 0 ? `${res.notified} passageiro(s) notificado(s).` : 'Sem passageiros para avisar.',
@@ -33,8 +56,10 @@ const EditTripDialog = ({ trip, onClose }) => {
     onClose();
   };
 
-  const doCancel = () => {
-    const res = cancelTrip(trip.id, reason.trim() || null);
+  const doCancel = async () => {
+    setSaving(true);
+    const res = await cancelTrip(trip.id, reason.trim() || null);
+    setSaving(false);
     toast({
       title: 'Viagem cancelada',
       description: res.notified > 0 ? `${res.notified} passageiro(s) foram avisados.` : 'Sem reservas para avisar.',
@@ -91,6 +116,35 @@ const EditTripDialog = ({ trip, onClose }) => {
                   onChange={(e) => set('price', e.target.value)}
                 />
               </div>
+              <div>
+                <label className="text-xs font-semibold text-[var(--bj-text)] opacity-70 pl-2">Número de vagas</label>
+                <div className="mt-1 flex items-center gap-3 round-input" style={{ paddingLeft: '10px', paddingRight: '10px' }} data-testid="edit-trip-seats-row">
+                  <button
+                    type="button"
+                    onClick={decSeats}
+                    className="w-8 h-8 rounded-full bg-[var(--bj-cream-2)] flex items-center justify-center hover:bg-[var(--bj-yellow)] transition-colors"
+                    data-testid="edit-trip-seats-dec"
+                  >
+                    <Minus size={16} />
+                  </button>
+                  <div className="flex-1 text-center font-extrabold text-[var(--bj-text)]" data-testid="edit-trip-seats-value">
+                    {form.seatsTotal} {Number(form.seatsTotal) === 1 ? 'vaga' : 'vagas'}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={incSeats}
+                    className="w-8 h-8 rounded-full bg-[var(--bj-cream-2)] flex items-center justify-center hover:bg-[var(--bj-yellow)] transition-colors"
+                    data-testid="edit-trip-seats-inc"
+                  >
+                    <Plus size={16} />
+                  </button>
+                </div>
+                {trip.seatsFilled > 0 && (
+                  <div className="text-[11px] text-[var(--bj-text)] opacity-60 pl-2 mt-1">
+                    {trip.seatsFilled} vaga(s) já reservada(s). Mínimo permitido: {trip.seatsFilled}.
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="mt-3 p-3 rounded-xl bg-[#FEF3C7] flex gap-2">
@@ -99,10 +153,12 @@ const EditTripDialog = ({ trip, onClose }) => {
             </div>
 
             <div className="grid grid-cols-2 gap-3 mt-4">
-              <button onClick={() => setConfirmCancel(true)} className="btn-outline-danger justify-center py-3">
+              <button onClick={() => setConfirmCancel(true)} className="btn-outline-danger justify-center py-3" data-testid="edit-trip-cancel-open">
                 <Trash2 size={16} /> Cancelar viagem
               </button>
-              <button onClick={save} className="btn-primary">Salvar alterações</button>
+              <button onClick={save} disabled={saving} className="btn-primary disabled:opacity-60" data-testid="edit-trip-save">
+                {saving ? 'Salvando...' : 'Salvar alterações'}
+              </button>
             </div>
           </>
         ) : (

@@ -152,7 +152,7 @@ class TripPatch(BaseModel):
     date: Optional[str] = None
     time: Optional[str] = None
     price: Optional[float] = None
-    seats_total: Optional[int] = None
+    seats_total: Optional[int] = Field(default=None, ge=1, le=8)
     pet_friendly: Optional[bool] = None
     home_pickup: Optional[bool] = None
 
@@ -503,7 +503,10 @@ async def update_trip(trip_id: str, payload: TripPatch, user: dict = Depends(get
         updates['price'] = float(payload.price)
         change_parts.append(f'novo preço R$ {updates["price"]}')
     if payload.seats_total is not None and payload.seats_total != trip['seats_total']:
+        if payload.seats_total < trip.get('seats_filled', 0):
+            raise HTTPException(status_code=400, detail=f"Não é possível reduzir para {payload.seats_total} vagas: já existem {trip.get('seats_filled', 0)} reservadas.")
         updates['seats_total'] = payload.seats_total
+        change_parts.append(f'{payload.seats_total} vagas no total')
     if payload.pet_friendly is not None:
         updates['pet_friendly'] = payload.pet_friendly
     if payload.home_pickup is not None:

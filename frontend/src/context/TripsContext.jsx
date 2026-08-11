@@ -197,6 +197,7 @@ export const TripsProvider = ({ children }) => {
       if (changes.date !== undefined) payload.date = changes.date;
       if (changes.time !== undefined) payload.time = changes.time;
       if (changes.price !== undefined) payload.price = Number(changes.price);
+      if (changes.seatsTotal !== undefined) payload.seats_total = Number(changes.seatsTotal);
       const { data } = await api.patch(`/trips/${tripId}`, payload);
       await refreshTrips();
       return { ok: true, trip: data.trip, notified: data.notified };
