@@ -362,17 +362,14 @@ async def register(payload: RegisterIn):
         raise HTTPException(status_code=400, detail='Papel inválido')
     user_id = gen_id()
     avatar = payload.avatar or f'https://api.dicebear.com/7.x/initials/svg?seed={payload.name}'
-    # Motoristas precisam ser aprovados pela moderação (até 24h)
-    initial_status = 'pendente' if payload.role == 'motorista' else 'ativo'
+    # Cadastro direto (aprovação de motorista desativada)
     user_doc = {
         'id': user_id, 'name': payload.name.strip(), 'email': payload.email.lower(),
         'password_hash': hash_password(payload.password), 'role': payload.role,
-        'rating': 0.0, 'trips': 0, 'avatar': avatar, 'status': initial_status,
-        'verified': False, 'created_at': datetime.utcnow(),
+        'rating': 0.0, 'trips': 0, 'avatar': avatar, 'status': 'ativo',
+        'verified': True, 'created_at': datetime.utcnow(),
     }
     await db.users.insert_one(user_doc)
-    if initial_status == 'pendente':
-        return {'token': None, 'user': user_public(user_doc), 'requires_approval': True}
     token = create_token(user_id)
     return {'token': token, 'user': user_public(user_doc), 'requires_approval': False}
 
