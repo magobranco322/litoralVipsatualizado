@@ -7,9 +7,18 @@ import { useNavigate } from 'react-router-dom';
 import { useToast } from '../hooks/use-toast';
 import api, { apiError } from '../lib/api';
 
-const TabBtn = ({ active, onClick, icon: Icon, children }) => (
-  <button onClick={onClick} className={`chip flex-1 justify-center ${active ? 'active' : ''}`}>
+const TabBtn = ({ active, onClick, icon: Icon, count, children }) => (
+  <button onClick={onClick} className={`chip flex-1 justify-center py-2 text-sm ${active ? 'active' : ''}`}>
     <Icon size={16} /> {children}
+    {typeof count === 'number' && (
+      <span
+        className={`ml-1 min-w-[20px] h-5 px-1.5 rounded-full text-[11px] font-extrabold flex items-center justify-center ${
+          active ? 'bg-[var(--bj-yellow)] text-[var(--bj-navy)]' : 'bg-[var(--bj-navy)] text-white'
+        }`}
+      >
+        {count}
+      </span>
+    )}
   </button>
 );
 
@@ -150,6 +159,10 @@ const ModerationPage = () => {
   const totalPending = pending.length;
   const openReports = reports.filter((r) => r.status === 'pendente').length;
   const blockedUsers = users.filter((u) => u.status === 'bloqueado').length;
+  const totalMotoristas = users.filter((u) => u.role === 'motorista').length;
+  const totalPassageiros = users.filter((u) => u.role === 'passageiro').length;
+  const totalTrips = trips.length;
+  const totalReports = reports.length;
 
   return (
     <div className="mobile-shell">
@@ -178,11 +191,11 @@ const ModerationPage = () => {
         </div>
 
         <div className="mt-5 flex gap-2 overflow-x-auto no-scrollbar">
-          <TabBtn active={tab === 'aprovacoes'} onClick={() => setTab('aprovacoes')} icon={UserCheck}>Aprovações</TabBtn>
-          <TabBtn active={tab === 'viagens'} onClick={() => setTab('viagens')} icon={Car}>Viagens</TabBtn>
-          <TabBtn active={tab === 'motoristas'} onClick={() => setTab('motoristas')} icon={Car}>Motoristas</TabBtn>
-          <TabBtn active={tab === 'passageiros'} onClick={() => setTab('passageiros')} icon={Users}>Passageiros</TabBtn>
-          <TabBtn active={tab === 'denuncias'} onClick={() => setTab('denuncias')} icon={AlertTriangle}>Denúncias</TabBtn>
+          <TabBtn active={tab === 'aprovacoes'} onClick={() => setTab('aprovacoes')} icon={UserCheck} count={totalPending}>Aprovações</TabBtn>
+          <TabBtn active={tab === 'viagens'} onClick={() => setTab('viagens')} icon={Car} count={totalTrips}>Viagens</TabBtn>
+          <TabBtn active={tab === 'motoristas'} onClick={() => setTab('motoristas')} icon={Car} count={totalMotoristas}>Motoristas</TabBtn>
+          <TabBtn active={tab === 'passageiros'} onClick={() => setTab('passageiros')} icon={Users} count={totalPassageiros}>Passageiros</TabBtn>
+          <TabBtn active={tab === 'denuncias'} onClick={() => setTab('denuncias')} icon={AlertTriangle} count={totalReports}>Denúncias</TabBtn>
         </div>
 
         <div className="mt-5 pb-6">
