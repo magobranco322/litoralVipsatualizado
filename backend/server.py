@@ -317,6 +317,8 @@ async def get_current_user(cred: Optional[HTTPAuthorizationCredentials] = Depend
         raise HTTPException(status_code=401, detail='Usuário não encontrado')
     if u.get('status') == 'bloqueado':
         raise HTTPException(status_code=403, detail='Conta bloqueada. Contate o suporte.')
+    if u.get('status') == 'pendente':
+        raise HTTPException(status_code=403, detail='Cadastro em análise pela moderação. Aguarde a aprovação em até 24 horas.')
     return u
 
 
@@ -360,15 +362,19 @@ async def register(payload: RegisterIn):
         raise HTTPException(status_code=400, detail='Papel inválido')
     user_id = gen_id()
     avatar = payload.avatar or f'https://api.dicebear.com/7.x/initials/svg?seed={payload.name}'
+    # Motoristas precisam ser aprovados pela moderação (até 24h)
+    initial_status = 'pendente' if payload.role == 'motorista' else 'ativo'
     user_doc = {
         'id': user_id, 'name': payload.name.strip(), 'email': payload.email.lower(),
         'password_hash': hash_password(payload.password), 'role': payload.role,
-        'rating': 0.0, 'trips': 0, 'avatar': avatar, 'status': 'ativo',
+        'rating': 0.0, 'trips': 0, 'avatar': avatar, 'status': initial_status,
         'verified': False, 'created_at': datetime.utcnow(),
     }
     await db.users.insert_one(user_doc)
+    if initial_status == 'pendente':
+        return {'token': None, 'user': user_public(user_doc), 'requires_approval': True}
     token = create_token(user_id)
-    return {'token': token, 'user': user_public(user_doc)}
+    return {'token': token, 'user': user_public(user_doc), 'requires_approval': False}
 
 
 @api.post('/auth/login')
@@ -378,6 +384,8 @@ async def login(payload: LoginIn):
         raise HTTPException(status_code=401, detail='E-mail ou senha inválidos')
     if u.get('status') == 'bloqueado':
         raise HTTPException(status_code=403, detail='Conta bloqueada. Contate o suporte.')
+    if u.get('status') == 'pendente':
+        raise HTTPException(status_code=403, detail='Cadastro em análise pela moderação. Aguarde a aprovação em até 24 horas.')
     token = create_token(u['id'])
     return {'token': token, 'user': user_public(u)}
 

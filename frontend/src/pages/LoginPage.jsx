@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Mail, Lock, User as UserIcon, Car, UserRound, Camera } from 'lucide-react';
+import { Mail, Lock, User as UserIcon, Car, UserRound, Camera, Clock, CheckCircle2 } from 'lucide-react';
 import { useToast } from '../hooks/use-toast';
 import { readImageAsDataUrl } from '../lib/image';
 
@@ -13,6 +13,7 @@ const LoginPage = () => {
   const [password, setPassword] = useState('');
   const [avatar, setAvatar] = useState('');
   const [loading, setLoading] = useState(false);
+  const [pendingApproval, setPendingApproval] = useState(false);
   const { login, register } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -47,6 +48,12 @@ const LoginPage = () => {
       toast({ title: 'Ops!', description: res.message, variant: 'destructive' });
       return;
     }
+    if (res.requires_approval) {
+      // Motorista aguardando aprovação: não faz login, mostra tela de espera
+      setPendingApproval(true);
+      setPassword('');
+      return;
+    }
     toast({ title: mode === 'login' ? 'Bem-vindo de volta!' : 'Conta criada com sucesso!' });
     navigate('/buscar', { replace: true });
   };
@@ -66,13 +73,47 @@ const LoginPage = () => {
         </div>
 
         <h1 className="text-3xl font-extrabold text-[var(--bj-text)] mt-6">
-          {mode === 'login' ? 'Entrar' : 'Criar conta'}
+          {pendingApproval ? 'Cadastro em análise' : mode === 'login' ? 'Entrar' : 'Criar conta'}
         </h1>
         <p className="text-[var(--bj-text)] opacity-70 mt-1">
-          {mode === 'login' ? 'Acesse sua conta para continuar.' : 'Junte-se à comunidade em minutos.'}
+          {pendingApproval
+            ? 'Recebemos seu cadastro de motorista.'
+            : mode === 'login'
+              ? 'Acesse sua conta para continuar.'
+              : 'Junte-se à comunidade em minutos.'}
         </p>
 
-        {mode === 'register' && (
+        {pendingApproval && (
+          <>
+            <div className="mt-6 p-5 rounded-2xl bg-white border-2 border-dashed border-[var(--bj-yellow)]">
+              <div className="flex items-start gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-[var(--bj-navy)] flex items-center justify-center flex-shrink-0">
+                  <Clock size={22} className="text-[var(--bj-yellow)]" />
+                </div>
+                <div>
+                  <div className="font-extrabold text-[var(--bj-text)] leading-tight">Aguarde a aprovação em até 24 horas</div>
+                  <p className="text-sm text-[var(--bj-text)] opacity-80 mt-1 leading-relaxed">
+                    Todos os motoristas passam por análise da moderação antes de publicar viagens. Assim garantimos a segurança dos passageiros.
+                  </p>
+                </div>
+              </div>
+              <div className="mt-4 space-y-2 text-sm text-[var(--bj-text)] opacity-90">
+                <div className="flex items-center gap-2"><CheckCircle2 size={16} className="text-[var(--bj-navy)]" /> Você será notificado(a) por e-mail quando aprovado(a).</div>
+                <div className="flex items-center gap-2"><CheckCircle2 size={16} className="text-[var(--bj-navy)]" /> Após aprovação, é só entrar com o mesmo e-mail e senha.</div>
+                <div className="flex items-center gap-2"><CheckCircle2 size={16} className="text-[var(--bj-navy)]" /> Prazo máximo: <b>24 horas</b>.</div>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => { setPendingApproval(false); setMode('login'); setName(''); setPassword(''); }}
+              className="btn-primary w-full mt-5"
+            >
+              Voltar para entrar
+            </button>
+          </>
+        )}
+
+        {!pendingApproval && mode === 'register' && (
           <div className="flex justify-center mt-6">
             <label className="relative cursor-pointer group">
               <div className="w-24 h-24 rounded-full overflow-hidden bg-[var(--bj-cream-2)] border-4 border-[var(--bj-yellow)] flex items-center justify-center">
@@ -90,7 +131,7 @@ const LoginPage = () => {
           </div>
         )}
 
-        {mode === 'register' && (
+        {!pendingApproval && mode === 'register' && (
           <div className="flex gap-2 mt-6">
             <button
               type="button"
@@ -109,6 +150,7 @@ const LoginPage = () => {
           </div>
         )}
 
+        {!pendingApproval && (
         <form onSubmit={submit} className="mt-6 space-y-3">
           {mode === 'register' && (
             <div className="input-icon-wrap">
@@ -149,7 +191,9 @@ const LoginPage = () => {
             {loading ? 'Aguarde...' : mode === 'login' ? 'Entrar' : 'Criar conta'}
           </button>
         </form>
+        )}
 
+        {!pendingApproval && (
         <div className="text-center mt-5 text-sm text-[var(--bj-text)]">
           {mode === 'login' ? (
             <>
@@ -167,7 +211,9 @@ const LoginPage = () => {
             </>
           )}
         </div>
+        )}
 
+        {!pendingApproval && (
         <div className="mt-8 p-4 bg-white rounded-2xl border border-[#ece3c7]">
           <div className="text-xs font-bold text-[var(--bj-text)] mb-2">Contas de demonstração</div>
           <div className="text-xs text-[var(--bj-text)] opacity-80 space-y-1">
@@ -175,6 +221,7 @@ const LoginPage = () => {
             <div><b>Motorista:</b> giovanna@example.com / 123456</div>
           </div>
         </div>
+        )}
       </div>
     </div>
   );

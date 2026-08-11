@@ -52,6 +52,10 @@ export const AuthProvider = ({ children }) => {
   const register = async (payload) => {
     try {
       const { data } = await api.post('/auth/register', payload);
+      if (data && data.requires_approval) {
+        // Do NOT login: driver needs approval first
+        return { ok: true, requires_approval: true, user: data.user };
+      }
       setToken(data.token);
       setUser(data.user);
       await refreshUsers();
