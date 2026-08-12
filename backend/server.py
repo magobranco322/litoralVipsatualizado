@@ -451,14 +451,17 @@ async def list_trips(
     if home is True:
         q['home_pickup'] = True
 
-    sort_field = 'created_at'
-    direction = -1
+    # Default sort: by departure date+time ascending (viagens mais próximas primeiro).
+    # 'date' is stored as DD/MM/YYYY so we sort in Python via _departure_utc.
     if sort == 'price':
-        sort_field, direction = 'price', 1
-    elif sort == 'rating':
-        sort_field, direction = 'rating', -1
-
-    docs = await db.trips.find(q, {'_id': 0}).sort(sort_field, direction).to_list(500)
+        docs = await db.trips.find(q, {'_id': 0}).sort('price', 1).to_list(500)
+        return docs
+    if sort == 'rating':
+        docs = await db.trips.find(q, {'_id': 0}).sort('rating', -1).to_list(500)
+        return docs
+    docs = await db.trips.find(q, {'_id': 0}).to_list(500)
+    FAR_FUTURE = datetime(9999, 12, 31)
+    docs.sort(key=lambda t: _departure_utc(t.get('date', ''), t.get('time', '')) or FAR_FUTURE)
     return docs
 
 
@@ -851,7 +854,9 @@ async def admin_delete_report(report_id: str, user: dict = Depends(require_admin
 @api.get('/admin/trips')
 async def admin_list_trips(user: dict = Depends(require_admin)):
     await cleanup_expired_trips()
-    docs = await db.trips.find({}, {'_id': 0}).sort('created_at', -1).to_list(1000)
+    docs = await db.trips.find({}, {'_id': 0}).to_list(1000)
+    FAR_FUTURE = datetime(9999, 12, 31)
+    docs.sort(key=lambda t: _departure_utc(t.get('date', ''), t.get('time', '')) or FAR_FUTURE)
     return docs
 
 
