@@ -627,8 +627,10 @@ async def cancel_reservation(res_id: str, user: dict = Depends(get_current_user)
     res = await db.reservations.find_one({'id': res_id}, {'_id': 0})
     if not res:
         raise HTTPException(status_code=404, detail='Reserva não encontrada')
-    if res['passenger_id'] != user['id']:
-        raise HTTPException(status_code=403, detail='Apenas o passageiro pode cancelar')
+    is_passenger = res['passenger_id'] == user['id']
+    is_driver = res['driver_id'] == user['id']
+    if not (is_passenger or is_driver):
+        raise HTTPException(status_code=403, detail='Sem permissão para cancelar esta reserva')
     if res['status'] == 'cancelada':
         return {'ok': True}
     await db.reservations.update_one({'id': res_id}, {'$set': {'status': 'cancelada'}})
@@ -636,7 +638,11 @@ async def cancel_reservation(res_id: str, user: dict = Depends(get_current_user)
     if trip and trip['seats_filled'] > 0:
         await db.trips.update_one({'id': trip['id']}, {'$inc': {'seats_filled': -1}})
     if trip:
-        await add_notification(trip['driver_id'], 'cancelamento', f'Um passageiro cancelou a reserva em {trip["origin"]} → {trip["destination"]}.', trip['id'])
+        if is_driver:
+            # Notify the passenger their booking was cancelled by the driver
+            await add_notification(res['passenger_id'], 'cancelamento', f'O motorista cancelou sua reserva em {trip["origin"]} → {trip["destination"]}.', trip['id'])
+        else:
+            await add_notification(trip['driver_id'], 'cancelamento', f'Um passageiro cancelou a reserva em {trip["origin"]} → {trip["destination"]}.', trip['id'])
     return {'ok': True}
 
 

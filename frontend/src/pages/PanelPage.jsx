@@ -178,13 +178,26 @@ const PanelPage = () => {
                           {r.status}
                         </span>
                         {r.status === 'confirmada' && (
-                          <button
-                            onClick={() => { completeReservation(r.id); toast({ title: 'Viagem marcada como concluída' }); }}
-                            className="shrink-0 chip active justify-center text-xs py-1.5 px-3"
-                            data-testid={`complete-res-${r.id}`}
-                          >
-                            <Flag size={12} /> Concluir
-                          </button>
+                          <>
+                            <button
+                              onClick={() => { completeReservation(r.id); toast({ title: 'Viagem marcada como concluída' }); }}
+                              className="shrink-0 chip active justify-center text-xs py-1.5 px-3"
+                              data-testid={`complete-res-${r.id}`}
+                            >
+                              <Flag size={12} /> Concluir
+                            </button>
+                            <button
+                              onClick={() => {
+                                if (!window.confirm(`Cancelar a reserva de ${r.passengerName || 'este passageiro'}?`)) return;
+                                cancelReservation(r.id);
+                                toast({ title: 'Reserva cancelada', description: 'O passageiro foi notificado.', variant: 'destructive' });
+                              }}
+                              className="shrink-0 btn-outline-danger justify-center text-xs py-1.5 px-3"
+                              data-testid={`cancel-res-${r.id}`}
+                            >
+                              <XCircle size={12} /> Cancelar
+                            </button>
+                          </>
                         )}
                       </div>
                     ))}
