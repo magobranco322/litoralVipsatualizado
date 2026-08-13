@@ -136,7 +136,7 @@ const SearchPage = () => {
             <button
               type="button"
               onClick={swap}
-              className="w-9 h-9 rounded-full bg-white border border-[#ece3c7] hover:border-[var(--bj-navy)] flex items-center justify-center transition-colors shadow-sm rotate-90"
+              className="w-9 h-9 rounded-full bg-white border border-[#E5E7EB] hover:border-[var(--bj-navy)] flex items-center justify-center transition-colors shadow-sm rotate-90"
               title="Inverter"
             >
               <ArrowRightLeft size={16} className="text-[var(--bj-navy)]" />
@@ -180,7 +180,7 @@ const SearchPage = () => {
           {dateFilter && (
             <button
               onClick={() => setDateFilter('')}
-              className="w-11 h-11 rounded-full bg-white border border-[#ece3c7] hover:border-[var(--bj-red)] hover:text-[var(--bj-red)] flex items-center justify-center transition-colors"
+              className="w-11 h-11 rounded-full bg-white border border-[#E5E7EB] hover:border-[var(--bj-red)] hover:text-[var(--bj-red)] flex items-center justify-center transition-colors"
               title="Limpar data"
             >
               <X size={18} />
@@ -211,7 +211,7 @@ const SearchPage = () => {
               <ArrowUpDown size={16} /> Ordenar
             </button>
             {sortOpen && (
-              <div className="absolute right-0 top-8 bg-white rounded-2xl shadow-lg border border-[#ece3c7] py-2 w-44 z-10">
+              <div className="absolute right-0 top-8 bg-white rounded-2xl shadow-lg border border-[#E5E7EB] py-2 w-44 z-10">
                 {[
                   { k: 'date', l: 'Data (padrão)' },
                   { k: 'price', l: 'Menor preço' },

@@ -214,7 +214,7 @@ const LoginPage = () => {
         )}
 
         {!pendingApproval && (
-        <div className="mt-8 p-4 bg-white rounded-2xl border border-[#ece3c7]">
+        <div className="mt-8 p-4 bg-white rounded-2xl border border-[#E5E7EB]">
           <div className="text-xs font-bold text-[var(--bj-text)] mb-2">Contas de demonstração</div>
           <div className="text-xs text-[var(--bj-text)] opacity-80 space-y-1">
             <div><b>Passageiro:</b> magobranco322@gmail.com / 123456</div>

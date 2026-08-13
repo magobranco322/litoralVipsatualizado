@@ -176,15 +176,15 @@ const ModerationPage = () => {
         <p className="text-[var(--bj-text)] opacity-70">Painel administrativo Motoristas VIP Litoral.</p>
 
         <div className="grid grid-cols-3 gap-2 mt-5">
-          <div className="bg-white p-3 rounded-2xl border border-[#ece3c7] text-center">
+          <div className="bg-white p-3 rounded-2xl border border-[#E5E7EB] text-center">
             <div className="text-2xl font-extrabold text-[var(--bj-navy)]">{totalPending}</div>
             <div className="text-[11px] text-[var(--bj-text)] opacity-70 mt-0.5">Aprovações</div>
           </div>
-          <div className="bg-white p-3 rounded-2xl border border-[#ece3c7] text-center">
+          <div className="bg-white p-3 rounded-2xl border border-[#E5E7EB] text-center">
             <div className="text-2xl font-extrabold text-[var(--bj-red)]">{openReports}</div>
             <div className="text-[11px] text-[var(--bj-text)] opacity-70 mt-0.5">Denúncias</div>
           </div>
-          <div className="bg-white p-3 rounded-2xl border border-[#ece3c7] text-center">
+          <div className="bg-white p-3 rounded-2xl border border-[#E5E7EB] text-center">
             <div className="text-2xl font-extrabold text-[var(--bj-text)]">{blockedUsers}</div>
             <div className="text-[11px] text-[var(--bj-text)] opacity-70 mt-0.5">Bloqueados</div>
           </div>
@@ -202,12 +202,12 @@ const ModerationPage = () => {
           {tab === 'aprovacoes' && (
             <div className="space-y-3">
               {pending.length === 0 && (
-                <div className="bg-white p-6 rounded-2xl text-center text-[var(--bj-text)] opacity-70 border border-[#ece3c7]">
+                <div className="bg-white p-6 rounded-2xl text-center text-[var(--bj-text)] opacity-70 border border-[#E5E7EB]">
                   Nada para aprovar por enquanto.
                 </div>
               )}
               {pending.map((p) => (
-                <div key={p.id} className="bg-white rounded-2xl p-4 border border-[#ece3c7]">
+                <div key={p.id} className="bg-white rounded-2xl p-4 border border-[#E5E7EB]">
                   <div className="flex items-center justify-between">
                     <div>
                       <div className="font-bold text-[var(--bj-text)]">{p.name}</div>
@@ -233,12 +233,12 @@ const ModerationPage = () => {
           {tab === 'viagens' && (
             <div className="space-y-2">
               {trips.length === 0 && (
-                <div className="bg-white p-6 rounded-2xl text-center text-[var(--bj-text)] opacity-70 border border-[#ece3c7]">
+                <div className="bg-white p-6 rounded-2xl text-center text-[var(--bj-text)] opacity-70 border border-[#E5E7EB]">
                   Nenhuma viagem publicada.
                 </div>
               )}
               {trips.map((t) => (
-                <div key={t.id} className="bg-white rounded-2xl p-3 border border-[#ece3c7]">
+                <div key={t.id} className="bg-white rounded-2xl p-3 border border-[#E5E7EB]">
                   <div className="flex items-center gap-3">
                     <img src={t.driver_avatar} className="w-10 h-10 rounded-full object-cover flex-shrink-0" alt="" />
                     <div className="flex-1 min-w-0">
@@ -285,13 +285,13 @@ const ModerationPage = () => {
                 const list = users.filter((u) => u.role === roleFilter);
                 if (list.length === 0) {
                   return (
-                    <div className="bg-white p-6 rounded-2xl text-center text-[var(--bj-text)] opacity-70 border border-[#ece3c7]">
+                    <div className="bg-white p-6 rounded-2xl text-center text-[var(--bj-text)] opacity-70 border border-[#E5E7EB]">
                       Nenhum {roleFilter} cadastrado.
                     </div>
                   );
                 }
                 return list.map((u) => (
-                  <div key={u.id} className="bg-white rounded-2xl p-3 border border-[#ece3c7]">
+                  <div key={u.id} className="bg-white rounded-2xl p-3 border border-[#E5E7EB]">
                     <div className="flex items-center gap-3">
                       <img src={u.avatar} className="w-11 h-11 rounded-full object-cover flex-shrink-0" alt="" />
                       <div className="flex-1 min-w-0">
@@ -336,14 +336,14 @@ const ModerationPage = () => {
           {tab === 'denuncias' && (
             <div className="space-y-3">
               {reports.length === 0 && (
-                <div className="bg-white p-6 rounded-2xl text-center text-[var(--bj-text)] opacity-70 border border-[#ece3c7]">
+                <div className="bg-white p-6 rounded-2xl text-center text-[var(--bj-text)] opacity-70 border border-[#E5E7EB]">
                   Sem denúncias.
                 </div>
               )}
               {reports.map((r) => {
                 const TypeIcon = r.type === 'usuario' ? Users : r.type === 'viagem' ? Car : MessageSquare;
                 return (
-                  <div key={r.id} className="bg-white rounded-2xl p-4 border border-[#ece3c7]">
+                  <div key={r.id} className="bg-white rounded-2xl p-4 border border-[#E5E7EB]">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <TypeIcon size={16} className="text-[var(--bj-navy)]" />

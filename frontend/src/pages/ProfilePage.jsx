@@ -11,7 +11,7 @@ import { usePWAInstall } from '../hooks/usePWAInstall';
 const DisplayRow = ({ icon: Icon, label, value, onEdit }) => (
   <button
     onClick={onEdit}
-    className="w-full flex items-center gap-3 bg-white p-4 rounded-2xl border border-[#ece3c7] hover:border-[var(--bj-navy)] transition-colors text-left"
+    className="w-full flex items-center gap-3 bg-white p-4 rounded-2xl border border-[#E5E7EB] hover:border-[var(--bj-navy)] transition-colors text-left"
   >
     <div className="w-9 h-9 rounded-lg bg-[var(--bj-cream-2)] flex items-center justify-center">
       <Icon size={18} className="text-[var(--bj-navy)]" />
@@ -200,7 +200,7 @@ const ProfilePage = () => {
           </div>
         )}
 
-        <div className="mt-6 p-4 rounded-2xl bg-white border border-[#ece3c7]">
+        <div className="mt-6 p-4 rounded-2xl bg-white border border-[#E5E7EB]">
           <div className="font-bold text-[var(--bj-text)] mb-2">Sobre você</div>
           <p className="text-sm text-[var(--bj-text)] opacity-80 leading-relaxed">
             Bem-vindo(a) à Motoristas VIP Litoral! Complete seu perfil para aumentar a confiança de outros usuários e receber mais oportunidades de viagem.

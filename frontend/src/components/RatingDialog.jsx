@@ -55,7 +55,7 @@ const RatingDialog = ({ reservation, trip, onClose }) => {
             >
               <Star
                 size={38}
-                className={(hover || score) >= n ? 'fill-[var(--bj-yellow)] text-[var(--bj-yellow)]' : 'text-[#d9d2b8]'}
+                className={(hover || score) >= n ? 'fill-[var(--bj-yellow)] text-[var(--bj-yellow)]' : 'text-[#E5E7EB]'}
                 strokeWidth={1.8}
               />
             </button>

@@ -9,7 +9,7 @@ body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: #FBF3DF;
+  background: #F3F5F8;
 }
 
 code {
@@ -21,10 +21,12 @@ code {
   --bj-navy-dark: #071e42;
   --bj-yellow: #E8B800;
   --bj-yellow-dark: #C79E00;
-  --bj-cream: #FBF3DF;
-  --bj-cream-2: #F6EAC7;
+  --bj-cream: #F3F5F8;
+  --bj-cream-2: #E5EAF2;
   --bj-red: #E63946;
-  --bj-text: #14213D;
+  --bj-text: #0F172A;
+  --bj-muted: #64748B;
+  --bj-border: #E5E7EB;
 }
 
 @layer base {
@@ -82,7 +84,7 @@ code {
   gap: 6px;
   padding: 8px 14px;
   background: #ffffff;
-  border: 1.5px solid #e6e0cc;
+  border: 1.5px solid #E5E7EB;
   border-radius: 999px;
   font-weight: 600;
   font-size: 14px;
@@ -96,7 +98,7 @@ code {
 .round-input {
   width: 100%;
   background: #fff;
-  border: 1.5px solid #ece3c7;
+  border: 1.5px solid #E5E7EB;
   border-radius: 999px;
   padding: 14px 18px 14px 46px;
   font-size: 15px;
@@ -112,7 +114,7 @@ code {
 .round-textarea {
   width: 100%;
   background: #fff;
-  border: 1.5px solid #ece3c7;
+  border: 1.5px solid #E5E7EB;
   border-radius: 20px;
   padding: 14px 18px;
   font-size: 15px;
@@ -183,7 +185,7 @@ code {
 .card-trip:hover { transform: translateY(-2px); box-shadow: 0 8px 22px rgba(11, 42, 91, 0.10); }
 
 .dashed-sep {
-  border-top: 1.5px dashed #d9d2b8;
+  border-top: 1.5px dashed #E5E7EB;
   margin: 14px 0 12px;
 }
 

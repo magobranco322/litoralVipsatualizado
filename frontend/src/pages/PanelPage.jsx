@@ -11,7 +11,7 @@ import { openWhatsApp, hasValidPhone, buildReservationMessage } from '../lib/wha
 import { Car, MapPin, Clock, Users, TrendingUp, Wallet, CheckCircle2, Plus, Star, XCircle, Flag, PencilLine, MessageCircle } from 'lucide-react';
 
 const Stat = ({ icon: Icon, label, value, tint }) => (
-  <div className="bg-white rounded-2xl p-4 border border-[#ece3c7] flex items-center gap-3">
+  <div className="bg-white rounded-2xl p-4 border border-[#E5E7EB] flex items-center gap-3">
     <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: tint }}>
       <Icon size={20} className="text-[var(--bj-navy)]" />
     </div>
@@ -97,7 +97,7 @@ const PanelPage = () => {
               <h2 className="text-lg font-extrabold text-[var(--bj-text)]">Minhas viagens publicadas</h2>
             </div>
             {myPublishedTrips.length === 0 ? (
-              <div className="bg-white rounded-2xl p-6 text-center text-[var(--bj-text)] opacity-70 border border-[#ece3c7]">
+              <div className="bg-white rounded-2xl p-6 text-center text-[var(--bj-text)] opacity-70 border border-[#E5E7EB]">
                 Você ainda não publicou viagens.{' '}
                 <button onClick={() => navigate('/publicar')} className="font-bold text-[var(--bj-navy)] ml-1">Publicar agora</button>
               </div>
@@ -131,7 +131,7 @@ const PanelPage = () => {
               <h2 className="text-lg font-extrabold text-[var(--bj-text)]">Reservas recebidas</h2>
             </div>
             {incomingReservations.length === 0 ? (
-              <div className="bg-white rounded-2xl p-6 text-center text-[var(--bj-text)] opacity-70 border border-[#ece3c7]">
+              <div className="bg-white rounded-2xl p-6 text-center text-[var(--bj-text)] opacity-70 border border-[#E5E7EB]">
                 Sem reservas por enquanto.
               </div>
             ) : (
@@ -168,7 +168,7 @@ const PanelPage = () => {
               <h2 className="text-lg font-extrabold text-[var(--bj-text)]">Minhas reservas</h2>
             </div>
             {myReservations.length === 0 ? (
-              <div className="bg-white rounded-2xl p-6 text-center text-[var(--bj-text)] opacity-70 border border-[#ece3c7]">
+              <div className="bg-white rounded-2xl p-6 text-center text-[var(--bj-text)] opacity-70 border border-[#E5E7EB]">
                 Você ainda não reservou vagas. Descubra viagens no botão Buscar.
               </div>
             ) : (
@@ -238,7 +238,7 @@ const PanelPage = () => {
               <h2 className="text-lg font-extrabold text-[var(--bj-text)]">Solicitações recentes</h2>
             </div>
             {localRequests.length === 0 ? (
-              <div className="bg-white rounded-2xl p-6 text-center text-[var(--bj-text)] opacity-70 border border-[#ece3c7]">
+              <div className="bg-white rounded-2xl p-6 text-center text-[var(--bj-text)] opacity-70 border border-[#E5E7EB]">
                 Sem solicitações ainda.
               </div>
             ) : (

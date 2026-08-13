@@ -51,7 +51,7 @@ const Header = () => {
 
   return (
     <>
-      <div className="px-5 pt-4 pb-3 flex items-center justify-between border-b border-[#ece3c7]">
+      <div className="px-5 pt-4 pb-3 flex items-center justify-between border-b border-[#E5E7EB]">
         <div className="text-[15px] text-[var(--bj-text)] truncate pr-3 flex-1">
           Olá, <span className="font-medium">{user.email}</span>
         </div>
@@ -78,7 +78,7 @@ const Header = () => {
       {open && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => setOpen(false)}>
           <div className="w-full max-w-[456px] bg-white rounded-t-3xl sm:rounded-3xl max-h-[85vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
-            <div className="px-5 py-4 border-b border-[#ece3c7] flex items-center justify-between">
+            <div className="px-5 py-4 border-b border-[#E5E7EB] flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Bell size={20} className="text-[var(--bj-navy)]" />
                 <span className="font-extrabold text-lg text-[var(--bj-text)]">Notificações</span>
@@ -113,7 +113,7 @@ const Header = () => {
                     const Icon = iconFor(n.type);
                     const tint = tintFor(n.type);
                     return (
-                      <div key={n.id} className={`p-3 rounded-2xl border ${n.read ? 'border-[#ece3c7] bg-white' : 'border-[var(--bj-navy)]/30 bg-[#F8F5EA]'} flex gap-3`}>
+                      <div key={n.id} className={`p-3 rounded-2xl border ${n.read ? 'border-[#E5E7EB] bg-white' : 'border-[var(--bj-navy)]/30 bg-[#F8F5EA]'} flex gap-3`}>
                         <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: tint.bg }}>
                           <Icon size={18} style={{ color: tint.color }} />
                         </div>

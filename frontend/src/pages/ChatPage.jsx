@@ -70,7 +70,7 @@ const ChatPage = () => {
     return (
       <div className="mobile-shell">
         <div className="striped-bar" />
-        <div className="px-4 py-3 flex items-center gap-3 border-b border-[#ece3c7] bg-white">
+        <div className="px-4 py-3 flex items-center gap-3 border-b border-[#E5E7EB] bg-white">
           <button onClick={() => { setActiveId(null); refreshChats(); }} className="p-1">
             <ArrowLeft size={22} className="text-[var(--bj-text)]" />
           </button>
@@ -96,7 +96,7 @@ const ChatPage = () => {
                   className={`max-w-[75%] px-4 py-2 rounded-2xl text-[15px] shadow-sm ${
                     mine
                       ? 'bg-[var(--bj-navy)] text-white rounded-br-sm'
-                      : 'bg-white text-[var(--bj-text)] rounded-bl-sm border border-[#ece3c7]'
+                      : 'bg-white text-[var(--bj-text)] rounded-bl-sm border border-[#E5E7EB]'
                   }`}
                 >
                   <div>{m.text}</div>
@@ -109,7 +109,7 @@ const ChatPage = () => {
           })}
         </div>
         <div className="fixed bottom-3 left-1/2 -translate-x-1/2 w-[calc(100%-24px)] max-w-[456px] px-2">
-          <div className="flex items-center gap-2 bg-white rounded-full border border-[#ece3c7] p-1.5 shadow-md">
+          <div className="flex items-center gap-2 bg-white rounded-full border border-[#E5E7EB] p-1.5 shadow-md">
             <input
               value={text}
               onChange={(e) => setText(e.target.value)}
@@ -157,7 +157,7 @@ const ChatPage = () => {
             <button
               key={c.id}
               onClick={() => openChat(c.id)}
-              className="w-full flex items-center gap-3 bg-white rounded-2xl p-3 border border-[#ece3c7] hover:border-[var(--bj-navy)] transition-colors text-left"
+              className="w-full flex items-center gap-3 bg-white rounded-2xl p-3 border border-[#E5E7EB] hover:border-[var(--bj-navy)] transition-colors text-left"
             >
               <img src={c.otherUserAvatar} className="w-12 h-12 rounded-full object-cover flex-shrink-0" alt="" />
               <div className="flex-1 min-w-0">
