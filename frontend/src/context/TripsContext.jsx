@@ -35,6 +35,9 @@ const normalizeReservation = (r) => ({
   ratingGiven: !!r.rating_given,
   ratingScore: r.rating_score,
   ratingComment: r.rating_comment,
+  passengerName: r.passenger_name || '',
+  passengerAvatar: r.passenger_avatar || '',
+  passengerPhone: r.passenger_phone || '',
 });
 
 const normalizeChat = (c) => ({

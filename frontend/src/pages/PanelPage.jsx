@@ -130,33 +130,67 @@ const PanelPage = () => {
               <h2 className="text-lg font-extrabold text-[var(--bj-text)]">Reservas recebidas</h2>
             </div>
             {incomingReservations.length === 0 ? (
-              <div className="bg-white rounded-2xl p-6 text-center text-[var(--bj-text)] opacity-70 border border-[#E5E7EB]">
+              <div className="bg-white rounded-2xl p-6 text-center text-[var(--bj-text)] opacity-70 border border-[var(--bj-border)]">
                 Sem reservas por enquanto.
               </div>
             ) : (
-              incomingReservations.map((r) => {
-                const t = findTrip(r.tripId);
-                if (!t) return null;
-                return (
-                  <div key={r.id} className="card-trip mb-3">
-                    <div className="flex items-center justify-between">
-                      <div className="font-bold text-[var(--bj-text)]">{t.origin} → {t.destination}</div>
-                      <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${r.status === 'concluida' ? 'bg-[#DCFCE7] text-[#166534]' : 'bg-[#FEF3C7] text-[#8A6D0A]'}`}>
-                        {r.status}
-                      </span>
+              // Group reservations by trip so the driver sees all passengers per viagem
+              Object.values(
+                incomingReservations.reduce((acc, r) => {
+                  const t = findTrip(r.tripId);
+                  if (!t) return acc;
+                  if (!acc[r.tripId]) acc[r.tripId] = { trip: t, items: [] };
+                  acc[r.tripId].items.push(r);
+                  return acc;
+                }, {})
+              ).map(({ trip: t, items }) => (
+                <div key={t.id} className="card-trip mb-3" data-testid={`incoming-trip-${t.id}`}>
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="font-extrabold text-[var(--bj-text)] truncate">{t.origin} → {t.destination}</div>
+                      <div className="text-sm text-[var(--bj-text)] opacity-70 mt-0.5">{t.date} · {t.time}</div>
                     </div>
-                    <div className="text-sm text-[var(--bj-text)] opacity-80 mt-1">{t.date} · {t.time}</div>
-                    {r.status === 'confirmada' && (
-                      <button
-                        onClick={() => { completeReservation(r.id); toast({ title: 'Viagem marcada como concluída' }); }}
-                        className="btn-primary mt-3 w-full text-sm py-2.5"
-                      >
-                        <Flag size={16} className="inline mr-1" /> Marcar como concluída
-                      </button>
-                    )}
+                    <span className="text-[11px] font-bold px-2 py-1 rounded-full bg-[var(--bj-cream-2)] text-[var(--bj-text)] shrink-0 flex items-center gap-1">
+                      <Users size={12} /> {items.length}
+                    </span>
                   </div>
-                );
-              })
+                  <div className="mt-3 pt-3 border-t border-[var(--bj-border)] space-y-2">
+                    {items.map((r) => (
+                      <div key={r.id} className="flex items-center gap-3" data-testid={`incoming-res-${r.id}`}>
+                        {r.passengerAvatar ? (
+                          <img src={r.passengerAvatar} alt={r.passengerName} className="w-9 h-9 rounded-full object-cover shrink-0" />
+                        ) : (
+                          <div className="w-9 h-9 rounded-full bg-[var(--bj-cream-2)] flex items-center justify-center shrink-0 text-[var(--bj-text)] font-bold">
+                            {(r.passengerName || '?').charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <div className="font-bold text-[var(--bj-text)] truncate leading-tight">{r.passengerName || 'Passageiro'}</div>
+                          {r.passengerPhone && (
+                            <div className="text-xs text-[var(--bj-muted)] truncate">{r.passengerPhone}</div>
+                          )}
+                        </div>
+                        <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                          r.status === 'concluida' ? 'bg-[#DCFCE7] text-[#166534]'
+                          : r.status === 'cancelada' ? 'bg-[#FEE2E2] text-[#991B1B]'
+                          : 'bg-[#FEF3C7] text-[#8A6D0A]'
+                        }`}>
+                          {r.status}
+                        </span>
+                        {r.status === 'confirmada' && (
+                          <button
+                            onClick={() => { completeReservation(r.id); toast({ title: 'Viagem marcada como concluída' }); }}
+                            className="shrink-0 chip active justify-center text-xs py-1.5 px-3"
+                            data-testid={`complete-res-${r.id}`}
+                          >
+                            <Flag size={12} /> Concluir
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))
             )}
           </>
         )}

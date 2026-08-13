@@ -571,6 +571,17 @@ async def my_reservations(user: dict = Depends(get_current_user)):
 @api.get('/reservations/incoming')
 async def incoming_reservations(user: dict = Depends(get_current_user)):
     docs = await db.reservations.find({'driver_id': user['id']}, {'_id': 0}).sort('created_at', -1).to_list(500)
+    if not docs:
+        return docs
+    passenger_ids = list({d['passenger_id'] for d in docs})
+    users_cursor = db.users.find({'id': {'$in': passenger_ids}}, {'_id': 0, 'id': 1, 'name': 1, 'avatar': 1, 'phone': 1})
+    passengers = {u['id']: u async for u in users_cursor}
+    for d in docs:
+        p = passengers.get(d['passenger_id'])
+        if p:
+            d['passenger_name'] = p.get('name', '')
+            d['passenger_avatar'] = p.get('avatar', '')
+            d['passenger_phone'] = p.get('phone', '')
     return docs
 
 
