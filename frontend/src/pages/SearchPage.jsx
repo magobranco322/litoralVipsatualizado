@@ -86,7 +86,6 @@ const SearchPage = () => {
   return (
     <div className="mobile-shell">
       <Header />
-      <div className="striped-bar" />
       <div className="px-5 pt-5">
         <div className="flex items-start justify-between gap-3">
           <div>

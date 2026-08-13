@@ -69,7 +69,6 @@ const ChatPage = () => {
   if (active) {
     return (
       <div className="mobile-shell">
-        <div className="striped-bar" />
         <div className="px-4 py-3 flex items-center gap-3 border-b border-[#E5E7EB] bg-white">
           <button onClick={() => { setActiveId(null); refreshChats(); }} className="p-1">
             <ArrowLeft size={22} className="text-[var(--bj-text)]" />
@@ -137,7 +136,6 @@ const ChatPage = () => {
   return (
     <div className="mobile-shell">
       <Header />
-      <div className="striped-bar" />
       <div className="px-5 pt-5">
         <h1 className="text-3xl font-extrabold text-[var(--bj-text)] leading-tight">Chat</h1>
         <p className="text-[var(--bj-text)] opacity-70 mt-1">Converse com motoristas e passageiros.</p>

@@ -60,7 +60,6 @@ const LoginPage = () => {
 
   return (
     <div className="mobile-shell">
-      <div className="striped-bar" />
       <div className="px-6 pt-8">
         <div className="flex items-center gap-3 mb-6">
           <div className="w-12 h-12 rounded-2xl bg-[var(--bj-navy)] flex items-center justify-center">

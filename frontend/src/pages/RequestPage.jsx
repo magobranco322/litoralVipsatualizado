@@ -32,7 +32,6 @@ const RequestPage = () => {
   return (
     <div className="mobile-shell">
       <Header />
-      <div className="striped-bar" />
       <form onSubmit={submit} className="px-5 pt-5">
         <h1 className="text-3xl font-extrabold text-[var(--bj-text)] leading-tight">Solicitar carro fechado</h1>
         <p className="text-[var(--bj-text)] opacity-70 mt-1">Viagem exclusiva — sem vagas compartilhadas.</p>

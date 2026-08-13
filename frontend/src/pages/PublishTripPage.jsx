@@ -24,7 +24,6 @@ const PublishTripPage = () => {
     return (
       <div className="mobile-shell">
         <Header />
-        <div className="striped-bar" />
         <div className="px-6 py-16 text-center">
           <Car size={40} className="mx-auto text-[var(--bj-navy)] opacity-40" />
           <h2 className="text-xl font-bold text-[var(--bj-text)] mt-4">Somente motoristas</h2>
@@ -61,7 +60,6 @@ const PublishTripPage = () => {
   return (
     <div className="mobile-shell">
       <Header />
-      <div className="striped-bar" />
       <form onSubmit={submit} className="px-5 pt-5">
         <button type="button" onClick={() => navigate(-1)} className="flex items-center gap-1.5 text-sm font-semibold text-[var(--bj-text)] opacity-70 hover:opacity-100">
           <ArrowLeft size={16} /> Voltar

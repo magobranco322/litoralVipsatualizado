@@ -167,7 +167,6 @@ const ModerationPage = () => {
   return (
     <div className="mobile-shell">
       <Header />
-      <div className="striped-bar" />
       <div className="px-5 pt-5">
         <div className="flex items-center gap-2 mb-1">
           <Shield size={22} className="text-[var(--bj-navy)]" />

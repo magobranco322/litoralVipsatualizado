@@ -97,7 +97,6 @@ const ProfilePage = () => {
   return (
     <div className="mobile-shell">
       <Header />
-      <div className="striped-bar" />
       <div className="px-5 pt-6">
         <div className="flex items-center gap-4">
           <div className="relative">
