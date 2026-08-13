@@ -14,7 +14,7 @@ const PublishTripPage = () => {
   const { toast } = useToast();
 
   const [form, setForm] = useState({
-    origin: '', destination: '', date: '', time: '',
+    origin: '', destination: '', date: '', time: '', arrivalTime: '',
     seatsTotal: 4, price: 50, petFriendly: false, homePickup: false,
   });
 
@@ -89,6 +89,15 @@ const PublishTripPage = () => {
               <input type="time" className="round-input pr-10" value={form.time} onChange={(e) => set('time', e.target.value)} />
               <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-[#6b6a5c] pointer-events-none" />
             </div>
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-[var(--bj-text)] opacity-70 pl-2">Hora de chegada estimada (opcional)</label>
+            <div className="input-icon-wrap mt-1">
+              <Clock size={18} className="input-icon" />
+              <input type="time" className="round-input pr-10" value={form.arrivalTime} onChange={(e) => set('arrivalTime', e.target.value)} data-testid="publish-arrival-time" />
+              <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-[#6b6a5c] pointer-events-none" />
+            </div>
+            <div className="text-[11px] text-[var(--bj-text)] opacity-60 pl-2 mt-1">Usado para mostrar a duração da viagem para os passageiros.</div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="input-icon-wrap">

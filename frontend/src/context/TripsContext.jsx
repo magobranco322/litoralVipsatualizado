@@ -15,6 +15,7 @@ const normalizeTrip = (t) => ({
   destination: t.destination,
   date: t.date,
   time: t.time,
+  arrivalTime: t.arrival_time || '',
   seatsTotal: t.seats_total,
   seatsFilled: t.seats_filled,
   price: t.price,
@@ -145,6 +146,7 @@ export const TripsProvider = ({ children }) => {
       const payload = {
         origin: form.origin, destination: form.destination,
         date: form.date, time: form.time,
+        arrival_time: form.arrivalTime || null,
         seats_total: Number(form.seatsTotal),
         price: Number(form.price),
         pet_friendly: !!form.petFriendly, home_pickup: !!form.homePickup,
@@ -196,6 +198,7 @@ export const TripsProvider = ({ children }) => {
       const payload = {};
       if (changes.date !== undefined) payload.date = changes.date;
       if (changes.time !== undefined) payload.time = changes.time;
+      if (changes.arrivalTime !== undefined) payload.arrival_time = changes.arrivalTime || null;
       if (changes.price !== undefined) payload.price = Number(changes.price);
       if (changes.seatsTotal !== undefined) payload.seats_total = Number(changes.seatsTotal);
       const { data } = await api.patch(`/trips/${tripId}`, payload);

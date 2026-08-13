@@ -142,6 +142,7 @@ class TripIn(BaseModel):
     destination: str
     date: str
     time: str
+    arrival_time: Optional[str] = None
     seats_total: int = Field(ge=1, le=8)
     price: float = Field(ge=10)
     pet_friendly: bool = False
@@ -151,6 +152,7 @@ class TripIn(BaseModel):
 class TripPatch(BaseModel):
     date: Optional[str] = None
     time: Optional[str] = None
+    arrival_time: Optional[str] = None
     price: Optional[float] = None
     seats_total: Optional[int] = Field(default=None, ge=1, le=8)
     pet_friendly: Optional[bool] = None
@@ -166,6 +168,7 @@ class TripOut(BaseModel):
     destination: str
     date: str
     time: str
+    arrival_time: Optional[str] = None
     seats_total: int
     seats_filled: int
     price: float
@@ -474,6 +477,7 @@ async def create_trip(payload: TripIn, user: dict = Depends(get_current_user)):
         'driver_id': user['id'], 'driver_name': user['name'], 'driver_avatar': user.get('avatar', ''),
         'origin': payload.origin.strip(), 'destination': payload.destination.strip(),
         'date': _norm_date_iso(payload.date), 'time': payload.time,
+        'arrival_time': (payload.arrival_time or '').strip() or None,
         'seats_total': payload.seats_total, 'seats_filled': 0,
         'price': float(payload.price),
         'pet_friendly': payload.pet_friendly, 'home_pickup': payload.home_pickup,
@@ -500,6 +504,12 @@ async def update_trip(trip_id: str, payload: TripPatch, user: dict = Depends(get
     if payload.time is not None and payload.time != trip['time']:
         updates['time'] = payload.time
         change_parts.append(f'novo horário {payload.time}')
+    if payload.arrival_time is not None:
+        new_arr = payload.arrival_time.strip() or None
+        if new_arr != trip.get('arrival_time'):
+            updates['arrival_time'] = new_arr
+            if new_arr:
+                change_parts.append(f'chegada às {new_arr}')
     if payload.price is not None and float(payload.price) != trip['price']:
         if payload.price < 10:
             raise HTTPException(status_code=400, detail='Valor mínimo R$ 10,00')

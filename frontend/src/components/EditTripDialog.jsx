@@ -9,6 +9,7 @@ const EditTripDialog = ({ trip, onClose }) => {
   const [form, setForm] = useState({
     date: trip.date,
     time: trip.time,
+    arrivalTime: trip.arrivalTime || '',
     price: trip.price,
     seatsTotal: trip.seatsTotal,
   });
@@ -41,6 +42,7 @@ const EditTripDialog = ({ trip, onClose }) => {
     const res = await updateTrip(trip.id, {
       date: form.date,
       time: form.time,
+      arrivalTime: form.arrivalTime,
       price: Number(form.price),
       seatsTotal: Number(form.seatsTotal),
     });
@@ -103,6 +105,17 @@ const EditTripDialog = ({ trip, onClose }) => {
                   style={{ paddingLeft: '18px' }}
                   value={form.time}
                   onChange={(e) => set('time', e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-[var(--bj-text)] opacity-70 pl-2">Hora de chegada (opcional)</label>
+                <input
+                  type="time"
+                  className="round-input mt-1"
+                  style={{ paddingLeft: '18px' }}
+                  value={form.arrivalTime}
+                  onChange={(e) => set('arrivalTime', e.target.value)}
+                  data-testid="edit-trip-arrival"
                 />
               </div>
               <div>
