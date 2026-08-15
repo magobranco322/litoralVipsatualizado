@@ -98,7 +98,15 @@ const TripCard = ({ trip, onClick }) => {
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="font-extrabold text-[15px] text-[var(--bj-text)] truncate leading-tight">{trip.driverName}</span>
+              <span
+                className="font-extrabold text-[15px] truncate leading-tight"
+                style={trip.featured
+                  ? { background: 'linear-gradient(135deg, #B48200 0%, #E8B800 45%, #F5C518 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', textShadow: '0 0 1px rgba(180,130,0,0.15)' }
+                  : { color: 'var(--bj-text)' }
+                }
+              >
+                {trip.driverName}
+              </span>
               {trip.featured && <FeaturedBadge />}
             </div>
             <div className="flex items-center gap-1 text-[13px] text-[var(--bj-muted)] mt-0.5">
