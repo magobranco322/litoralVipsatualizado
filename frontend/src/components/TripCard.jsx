@@ -1,5 +1,22 @@
 import React from 'react';
-import { Users, PawPrint, Home, Star, Car, ShieldCheck } from 'lucide-react';
+import { Users, PawPrint, Home, Star, Car, ShieldCheck, Crown } from 'lucide-react';
+
+// Golden "Melhor Motorista" featured badge.
+const FeaturedBadge = () => (
+  <span
+    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full shrink-0"
+    style={{
+      background: 'linear-gradient(135deg, #F5C518 0%, #E8B800 45%, #B48200 100%)',
+      border: '1px solid #8A6D0A',
+      boxShadow: '0 1px 4px rgba(180, 130, 0, 0.35)',
+    }}
+    title="Melhor Motorista Litoral VIP"
+    data-testid="featured-badge"
+  >
+    <Crown size={10} className="text-[#3a2a00]" strokeWidth={2.5} />
+    <span className="text-[9px] font-extrabold tracking-wider text-[#3a2a00] leading-none">MELHOR MOTORISTA</span>
+  </span>
+);
 
 // Compute duration string like "1h20" from HH:MM start and end (same day or crossing midnight).
 const computeDuration = (start, end) => {
@@ -80,7 +97,10 @@ const TripCard = ({ trip, onClick }) => {
             </span>
           </div>
           <div className="min-w-0">
-            <div className="font-extrabold text-[15px] text-[var(--bj-text)] truncate leading-tight">{trip.driverName}</div>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="font-extrabold text-[15px] text-[var(--bj-text)] truncate leading-tight">{trip.driverName}</span>
+              {trip.featured && <FeaturedBadge />}
+            </div>
             <div className="flex items-center gap-1 text-[13px] text-[var(--bj-muted)] mt-0.5">
               <Star size={12} className="fill-[var(--bj-muted)] text-[var(--bj-muted)]" />
               <span className="font-semibold">{trip.rating.toFixed(1)}</span>

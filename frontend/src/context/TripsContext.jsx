@@ -22,6 +22,7 @@ const normalizeTrip = (t) => ({
   petFriendly: !!t.pet_friendly,
   homePickup: !!t.home_pickup,
   status: t.status,
+  featured: !!t.featured,
   rating: Number(t.rating || 0),
   driverTrips: Number(t.driver_trips || 0),
 });

@@ -175,6 +175,7 @@ class TripOut(BaseModel):
     pet_friendly: bool
     home_pickup: bool
     status: TripStatus
+    featured: bool = False
     rating: float = 0.0
     driver_trips: int = 0
     created_at: datetime
@@ -481,7 +482,7 @@ async def create_trip(payload: TripIn, user: dict = Depends(get_current_user)):
         'seats_total': payload.seats_total, 'seats_filled': 0,
         'price': float(payload.price),
         'pet_friendly': payload.pet_friendly, 'home_pickup': payload.home_pickup,
-        'status': 'ativa', 'rating': float(user.get('rating', 0.0)),
+        'status': 'ativa', 'featured': False, 'rating': float(user.get('rating', 0.0)),
         'driver_trips': int(user.get('trips', 0)), 'created_at': datetime.utcnow(),
     }
     await db.trips.insert_one(trip)
@@ -885,6 +886,16 @@ async def admin_list_trips(user: dict = Depends(require_admin)):
     FAR_FUTURE = datetime(9999, 12, 31)
     docs.sort(key=lambda t: _departure_utc(t.get('date', ''), t.get('time', '')) or FAR_FUTURE)
     return docs
+
+
+@api.post('/admin/trips/{trip_id}/feature')
+async def admin_feature_trip(trip_id: str, user: dict = Depends(require_admin)):
+    trip = await db.trips.find_one({'id': trip_id}, {'_id': 0, 'id': 1, 'featured': 1})
+    if not trip:
+        raise HTTPException(status_code=404, detail='Viagem não encontrada')
+    new_val = not trip.get('featured', False)
+    await db.trips.update_one({'id': trip_id}, {'$set': {'featured': new_val}})
+    return {'ok': True, 'featured': new_val}
 
 
 @api.delete('/admin/trips/{trip_id}')

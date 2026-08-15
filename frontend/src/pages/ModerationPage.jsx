@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import Header from '../components/Header';
 import BottomNav from '../components/BottomNav';
 import { useAuth } from '../context/AuthContext';
-import { Shield, CheckCircle2, XCircle, AlertTriangle, UserCheck, MessageSquare, Car, Users, Ban, ShieldCheck, Trash2, MapPin, Clock, UserX, MessageCircle } from 'lucide-react';
+import { Shield, CheckCircle2, XCircle, AlertTriangle, UserCheck, MessageSquare, Car, Users, Ban, ShieldCheck, Trash2, MapPin, Clock, UserX, MessageCircle, Crown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../hooks/use-toast';
 import api, { apiError } from '../lib/api';
@@ -141,6 +141,19 @@ const ModerationPage = () => {
     }
   };
 
+  const toggleFeatured = async (trip) => {
+    try {
+      const { data } = await api.post(`/admin/trips/${trip.id}/feature`);
+      toast({
+        title: data.featured ? 'Viagem destacada' : 'Destaque removido',
+        description: data.featured ? 'Badge "Melhor Motorista" adicionado.' : 'Badge removido da viagem.',
+      });
+      load();
+    } catch (e) {
+      toast({ title: 'Erro', description: apiError(e), variant: 'destructive' });
+    }
+  };
+
   const cancelTripByAdmin = async (trip) => {
     const reason = window.prompt(`Cancelar a viagem ${trip.origin} → ${trip.destination}?\n\nInforme o motivo (opcional):`, '');
     if (reason === null) return; // user hit Cancel
@@ -241,7 +254,19 @@ const ModerationPage = () => {
                   <div className="flex items-center gap-3">
                     <img src={t.driver_avatar} className="w-10 h-10 rounded-full object-cover flex-shrink-0" alt="" />
                     <div className="flex-1 min-w-0">
-                      <div className="font-bold text-[var(--bj-text)] truncate">{t.driver_name}</div>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="font-bold text-[var(--bj-text)] truncate">{t.driver_name}</span>
+                        {t.featured && (
+                          <span
+                            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full shrink-0"
+                            style={{ background: 'linear-gradient(135deg, #F5C518 0%, #E8B800 45%, #B48200 100%)', border: '1px solid #8A6D0A' }}
+                            title="Destacada como Melhor Motorista"
+                          >
+                            <Crown size={9} className="text-[#3a2a00]" strokeWidth={2.5} />
+                            <span className="text-[8px] font-extrabold tracking-wider text-[#3a2a00] leading-none">MELHOR</span>
+                          </span>
+                        )}
+                      </div>
                       <div className="flex items-center gap-1 text-xs text-[var(--bj-text)] opacity-70 truncate">
                         <MapPin size={12} /> {t.origin} → {t.destination}
                       </div>
@@ -257,7 +282,15 @@ const ModerationPage = () => {
                     <span className="flex items-center gap-1"><Clock size={12} /> {t.date} · {t.time}</span>
                     <span className="flex items-center gap-1"><Users size={12} /> {t.seats_filled}/{t.seats_total} vagas</span>
                   </div>
-                  <div className="mt-3 grid grid-cols-2 gap-2">
+                  <div className="mt-3 grid grid-cols-3 gap-2">
+                    <button
+                      onClick={() => toggleFeatured(t)}
+                      className={`chip justify-center py-2 text-sm ${t.featured ? 'active' : ''}`}
+                      style={t.featured ? { background: '#B48200', borderColor: '#8A6D0A', color: '#fff' } : undefined}
+                      data-testid={`toggle-featured-${t.id}`}
+                    >
+                      <Crown size={14} /> {t.featured ? 'Remover' : 'Destacar'}
+                    </button>
                     <button
                       onClick={() => cancelTripByAdmin(t)}
                       disabled={t.status === 'cancelada'}
