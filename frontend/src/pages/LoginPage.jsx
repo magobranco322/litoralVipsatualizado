@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { Mail, Lock, User as UserIcon, Car, UserRound, Camera, Clock, CheckCircle2 } from 'lucide-react';
 import { useToast } from '../hooks/use-toast';
 import { readImageAsDataUrl } from '../lib/image';
+import InstallButton from '../components/InstallButton';
 
 const LoginPage = () => {
   const [mode, setMode] = useState('login');
@@ -61,14 +62,15 @@ const LoginPage = () => {
   return (
     <div className="mobile-shell">
       <div className="px-6 pt-8">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-12 h-12 rounded-2xl bg-[var(--bj-navy)] flex items-center justify-center">
+        <div className="flex items-start gap-3 mb-6">
+          <div className="w-12 h-12 rounded-2xl bg-[var(--bj-navy)] flex items-center justify-center flex-shrink-0">
             <Car size={22} className="text-[var(--bj-yellow)]" />
           </div>
-          <div>
+          <div className="flex-1 min-w-0">
             <div className="text-[20px] font-extrabold text-[var(--bj-text)] leading-tight tracking-tight">MOTORISTAS VIP LITORAL</div>
             <div className="text-sm text-[var(--bj-text)] opacity-70">Caronas & transfer pelo litoral</div>
           </div>
+          <InstallButton compact className="shrink-0 mt-1" />
         </div>
 
         <h1 className="text-3xl font-extrabold text-[var(--bj-text)] mt-6">
